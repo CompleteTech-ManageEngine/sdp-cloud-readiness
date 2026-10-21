@@ -1,6 +1,10 @@
-# One-run multi-portal assessment — updated for 2.1.2
+# One-run multi-portal assessment — updated for 2.2.0
 
-## Normal start
+## Separate instance credentials
+
+Use `--multi-key` or `--credential-file` when instances require different collection keys. See [secure setup and global ESM authorization](multiple-credentials.md). The directory-only key remains restricted to discovery. In multi-key mode each portal uses its explicit assignment; unassigned portals remain coverage gaps.
+
+## Normal single-key start
 
 ```powershell
 .\Run-All-Portals.cmd
@@ -39,7 +43,7 @@ A consented profile stores:
 
 These are examples, not suggested IDs for a live environment. Saved files additionally include `saved_at`. Only IDs actually supplied or returned by the directory are used. The profile is bound to scheme, host, port and application context; equivalent explicit/default ports normalize to the same host, different contexts do not. Each run tries live discovery first. A successful live directory supersedes a stale automatic cache. An explicitly supplied file supplements discovery by user request.
 
-A profile stores **no access grants**. Each portal's actual module access is tested again using the primary integration key. Cached/supplied scope is reported as `assisted`, not a complete live directory. To refresh, run with `--no-portal-cache` and enter the new complete verified list; `--save-portals` explicitly authorizes replacing the saved profile. A portal selection truncated by `--max-portals` is not written over a whole-portal profile.
+A profile stores **no access grants**. Each portal's actual module access is tested again using its assigned collection credential (the primary integration key in single-key mode). Cached/supplied scope is reported as `assisted`, not a complete live directory. To refresh, run with `--no-portal-cache` and enter the new complete verified list; `--save-portals` explicitly authorizes replacing the saved profile. A portal selection truncated by `--max-portals` is not written over a whole-portal profile.
 
 ## Single invocation alternatives
 

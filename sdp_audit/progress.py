@@ -192,7 +192,7 @@ class ProgressPrinter:
             if event.get("mode") == "explicit":
                 suffix = "explicit targets; environment directory was not enumerated"
             elif event.get("complete"):
-                suffix = ("directory list complete for the separate directory key; module permissions still use the original key"
+                suffix = ("directory list complete for the separate directory key; module permissions use assigned collection credentials"
                           if event.get("credential_scope") == "directory_key" else "directory list complete for this key")
             elif event.get("mode") == "assisted":
                 suffix = "verified multi-portal list selected within this run; directory coverage unverified"
@@ -368,4 +368,4 @@ def print_environment_coverage(env: EnvironmentSnapshot) -> None:
     if env.stop_classification:
         print("  Environment scan stopped: " + env.stop_classification + ".")
     print(f"  Global HTTP attempts: {env.stats.get('requests', 0)}/{env.settings.get('max_requests', 500)}; one shared rate limiter.")
-    print("  Complete lists describe this API key's visibility; sampled details and field registries have separate coverage.")
+    print("  Complete lists describe assigned credentials' visibility; sampled details and field registries have separate coverage.")

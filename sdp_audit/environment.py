@@ -150,22 +150,74 @@ class EnvironmentCollector:
         if item.portal.accessible is False:
             return False
         item.portal.scan_status = "COLLECTING"
-        more = self.collectors[portal_id].read_page(item.snapshot, key)
+        try:
+            more = self.collectors[portal_id].read_page(item.snapshot, key)
+        except ApiError as error:
+            if not getattr(self.client, "multi_key", False) or error.kind != "authentication":
+                raise
+            self._credential_gap(item, "AUTHENTICATION_FAILED")
+            return False
         self._access(item)
         self._capabilities(item)
         return more
+
+    @staticmethod
+    def _credential_gap(item: PortalSnapshot, reason: str) -> None:
+        item.portal.access_status = reason
+        for dataset in item.snapshot.datasets.values():
+            if not dataset.list_complete:
+                # Preserve an earlier operation-specific failure and its history.
+                if dataset.outcome in {None, "NOT_STARTED", "COLLECTING", "INCOMPLETE"}:
+                    dataset.outcome = reason
+                    dataset.status = "not_attempted" if not dataset.read_attempted else "partial"
+                    dataset.stop_reason = reason
+                note = "Credential coverage gap: " + reason + ". No absence was inferred."
+                if note not in dataset.issues:
+                    dataset.issues.append(note)
+
+    def _credential_ready(self, item: PortalSnapshot) -> bool:
+        if not getattr(self.client, "multi_key", False):
+            return True
+        status = self.client.credential_status(item.portal.id)
+        if status in {"missing", "failed"}:
+            self._credential_gap(item, "CREDENTIAL_MISSING" if status == "missing" else "AUTHENTICATION_FAILED")
+            return False
+        return True
+
+    def _global_read(self, work: tuple[Collector, Snapshot]) -> bool:
+        try:
+            return work[0].read_page(work[1], "orgusers")
+        except ApiError as error:
+            if not getattr(self.client, "multi_key", False) or error.kind != "authentication":
+                raise
+            return False
 
     def _global_directory(self, env: EnvironmentSnapshot) -> tuple[Collector, Snapshot] | None:
         if not self.env_options.collect_orgusers:
             env.source["orgusers_collection"] = "not_selected"
             return None
-        if env.topology.mode == "explicit":
+        multi_key = getattr(self.client, "multi_key", False)
+        if env.topology.mode == "explicit" and not multi_key:
             env.source["orgusers_collection"] = "not_collected_for_explicit_portal_targeting"
             return None
         if len(env.portals) <= 1:
             env.source["orgusers_collection"] = "multiple_instances_not_observed"
             return None
-        context = next((item.portal for item in env.portals.values() if item.portal.accessible is True), None)
+        if multi_key:
+            context_id = self.client.global_portal_id
+            if context_id is None:
+                env.source["orgusers_collection"] = "credential_missing"
+                snapshot = Snapshot(env.generated_at, {**env.source, "portal_id": None}, env.settings,
+                                    schema_version="2.0")
+                Collector(self.client, GLOBAL_RESOURCES, self.options).prepare(snapshot)
+                for dataset in snapshot.datasets.values():
+                    dataset.outcome = dataset.stop_reason = "CREDENTIAL_MISSING"
+                    dataset.issues.append("No explicit global credential and request context were assigned.")
+                env.global_snapshot = snapshot
+                return None
+            context = PortalInfo(id=context_id, name="Explicit global request context")
+        else:
+            context = next((item.portal for item in env.portals.values() if item.portal.accessible is True), None)
         if context is None and not self.resources:
             context = next((item.portal for item in env.portals.values() if item.portal.accessible is not False), None)
         if context is None:
@@ -191,9 +243,12 @@ class EnvironmentCollector:
                 iterator.close()
             except (RuntimeError, ValueError):
                 pass
-        for field_discovery in self.field_discoveries.values():
+        for portal_id, field_discovery in self.field_discoveries.items():
             if stop:
                 field_discovery.stop(stop)
+            elif (getattr(self.client, "multi_key", False)
+                  and self.client.credential_status(portal_id) == "failed"):
+                field_discovery.stop("AUTHENTICATION_FAILED")
             field_discovery.refresh_observed_keys()
         snapshots = [item.snapshot for item in env.portals.values()]
         if env.global_snapshot:
@@ -222,9 +277,12 @@ class EnvironmentCollector:
                     dataset.detail_complete = False
         for item in env.portals.values():
             self._access(item)
+            credential_ready = self._credential_ready(item)
             self._capabilities(item)
             datasets = list(item.snapshot.datasets.values())
-            if item.portal.accessible is False:
+            if not credential_ready:
+                item.portal.scan_status = item.portal.access_status
+            elif item.portal.accessible is False:
                 item.portal.scan_status = "PORTAL_NOT_ACCESSIBLE"
                 for ds in datasets:
                     if ds.outcome == "NOT_STARTED":
@@ -239,6 +297,9 @@ class EnvironmentCollector:
                                    "global_budget_applies": True,
                                    "requests": self.client.stats.get("requests_by_scope", {}).get("portal:" + item.portal.id, 0)}
         env.stats = dict(self.client.stats)
+        if getattr(self.client, "multi_key", False):
+            env.stats["credential_coverage"]["portals"] = {
+                pid: self.client.credential_status(pid) for pid in env.portals}
         env.authentication = str(env.stats.get("authentication", "unverified")).upper()
         env.stats["portals_discovered"] = sum(portal.discovered for portal in env.topology.portals)
         env.stats["portals_selected"] = len(env.portals)
@@ -263,6 +324,11 @@ class EnvironmentCollector:
                                              page_size=self.options.page_size,
                                              max_portals=self.env_options.max_portals,
                                              progress=self.progress)
+            if (getattr(self.client, "multi_key", False)
+                    and not self.env_options.diagnose_only
+                    and env.topology.outcome == "AUTHENTICATION_FAILED"):
+                env.topology.directory_outcome = env.topology.outcome
+                env.topology.outcome = "INCOMPLETE"
             if self.scope_resolver is not None and env.topology.outcome not in _TERMINAL_STOPS:
                 env.topology = self.scope_resolver(env.topology, env)
             for portal in env.topology.portals:
@@ -306,11 +372,13 @@ class EnvironmentCollector:
             # all first-page attempts. Subsequent pages use their own cursors.
             for resource in self.resources:
                 for portal_id in env.portals:
+                    if not self._credential_ready(env.portals[portal_id]):
+                        continue
                     if self._read(env, portal_id, resource.key):
                         queue.append((portal_id, resource.key))
             global_work = self._global_directory(env)
             if global_work:
-                global_more = global_work[0].read_page(global_work[1], "orgusers")
+                global_more = self._global_read(global_work)
 
             self._event(event="phase", phase="inventory")
             used = int(self.client.stats.get("requests", 0))
@@ -334,15 +402,15 @@ class EnvironmentCollector:
                     break
                 if queue:
                     portal_id, key = queue.popleft()
-                    if self._read(env, portal_id, key):
+                    if self._credential_ready(env.portals[portal_id]) and self._read(env, portal_id, key):
                         queue.append((portal_id, key))
                 if global_more and global_work:
-                    global_more = global_work[0].read_page(global_work[1], "orgusers")
+                    global_more = self._global_read(global_work)
 
             self._event(event="phase", phase="sampling")
             pending: deque[tuple[str, Iterator[Any]]] = deque()
             for portal_id, item in env.portals.items():
-                if item.portal.accessible is False:
+                if item.portal.accessible is False or not self._credential_ready(item):
                     continue
                 if self.env_options.discover_fields:
                     field_discovery = FieldDiscovery(self.client, portal_id, item.portal.name,
@@ -356,13 +424,13 @@ class EnvironmentCollector:
             # the whole remaining budget before another portal gets a sample.
             for kind in ("detail_steps", "child_steps"):
                 for portal_id, item in env.portals.items():
-                    if item.portal.accessible is not False:
+                    if item.portal.accessible is not False and self._credential_ready(item):
                         pending.append((portal_id, getattr(self.collectors[portal_id], kind)(item.snapshot)))
             self._generators = [iterator for _, iterator in pending]
             while pending:
                 portal_id, iterator = pending.popleft()
                 item = env.portals[portal_id]
-                if item.portal.accessible is False:
+                if item.portal.accessible is False or not self._credential_ready(item):
                     iterator.close()
                     continue
                 try:
@@ -373,6 +441,10 @@ class EnvironmentCollector:
                     pending.append((portal_id, iterator))
                 except StopIteration:
                     self._access(item)
+                except ApiError as error:
+                    if not getattr(self.client, "multi_key", False) or error.kind != "authentication":
+                        raise
+                    self._credential_gap(item, "AUTHENTICATION_FAILED")
         except BudgetExceeded as error:
             env.stop_classification = error.reason
             env.interrupted_reason = _REASONS.get(error.reason, "Global collection budget reached.")

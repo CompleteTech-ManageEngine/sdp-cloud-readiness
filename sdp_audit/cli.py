@@ -16,6 +16,7 @@ from . import __version__
 from .catalog import ALLOWED_PATTERNS, GLOBAL_RESOURCES, RESOURCES, UNEXPOSED_FEATURES
 from .collect import CollectionOptions
 from .credentials import acquire_api_key
+from .credential_setup import CredentialSetup
 from .environment import EnvironmentCollector, EnvironmentOptions
 from .environment_analysis import analyze_environment
 from .portal_scope import PortalScopeResolver, ScopeOptions
@@ -34,6 +35,7 @@ ANSWER_FIELDS = {
     "requires_legacy_history", "full_backup_requirement",
 }
 CONNECTION_FIELDS = {
+    "multi_key", "credential_file", "global_key_env", "global_portal_id",
     "host", "portal_id", "portal_ids", "portal_file", "max_portals", "metadata_limit", "ca_file", "rpm", "page_size", "max_records", "detail_limit",
     "max_requests", "max_minutes", "timeout", "subresource_parents", "max_child_records", "count_policy",
 }
@@ -83,6 +85,10 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--portal-file", help="Non-secret host-bound JSON portal list; supplements discovery and avoids re-entering IDs. See portals.example.json.")
     parser.add_argument("--directory-key", action="store_true", help="If directory discovery fails, prompt for a separately authorized hidden key ONLY for /portals; original key still collects every module.")
     parser.add_argument("--directory-key-env", help="Optional environment variable for a directory-only key on discovery failure. The value is never printed or saved.")
+    parser.add_argument("--multi-key", action="store_true", default=None, help="Explicit per-instance collection keys; unassigned instances remain unassessed. The primary key, if supplied, is for directory discovery only.")
+    parser.add_argument("--credential-file", help="Host-bound non-secret per-instance environment-reference assignments; enables multi-key mode.")
+    parser.add_argument("--global-key-env", help="Environment reference explicitly authorizing global Orguser collection in multi-key mode.")
+    parser.add_argument("--global-portal-id", help="Documented request context for the explicitly assigned global credential; requires --global-key-env.")
     parser.add_argument("--save-portals", action="store_true", help="Consent to save selected portal IDs/names under the user home directory, bound to this host. No credentials are saved.")
     parser.add_argument("--no-portal-cache", action="store_true", help="Do not load saved portal scope or ask to save it; explicit --save-portals still authorizes a save.")
     parser.add_argument("--non-interactive", action="store_true", help="Disable portal-recovery questions; supply a portal file/list or environment directory key when enumeration is unavailable.")
@@ -116,7 +122,7 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", default="sdp-assessments", help="Parent directory for a new timestamped report folder")
     parser.add_argument("--list-endpoints", action="store_true", help="Show the closed GET allowlist and unexposed areas without connecting")
     parser.add_argument("--demo", action="store_true", help="Run a synthetic multi-portal example with the actual read-only transport and mocked responses; no network or credentials")
-    parser.add_argument("--demo-scenario", choices=("single", "multi", "recovery"), default="multi", help="Fixture used with --demo")
+    parser.add_argument("--demo-scenario", choices=("single", "multi", "recovery", "multi_key"), default="multi", help="Fixture used with --demo")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress lines; final result paths are still printed")
     return parser
 
@@ -347,19 +353,39 @@ def main(argv: list[str] | None = None) -> int:
         else:
             host = settings.pop("host", None) or os.environ.get("SDP_HOST")
             if not host:
+                if args.non_interactive:
+                    raise ValueError("Unattended assessment requires a configured host.")
                 host = input("ServiceDesk Plus on-premises URL (https://host:port): ").strip()
             if not host:
                 raise ValueError("A source host is required.")
-            key = acquire_api_key(args.key_input, args.api_key_env)
+            multi_key = settings.pop("multi_key", False)
+            if not isinstance(multi_key, bool):
+                raise ValueError("multi_key must be a boolean.")
+            credential_file = settings.pop("credential_file", None)
+            global_key_env = settings.pop("global_key_env", None)
+            global_portal_id = settings.pop("global_portal_id", None)
+            multi_key = multi_key or credential_file is not None
+            if (global_key_env or global_portal_id) and not multi_key:
+                raise ValueError("Explicit global credentials require multi-key mode.")
+            if args.non_interactive and (args.key_input != "auto" or
+                                         not multi_key and not os.environ.get(args.api_key_env)):
+                raise ValueError("Unattended assessment requires environment credentials and automatic key input.")
+            if args.non_interactive and args.directory_key and not args.directory_key_env:
+                raise ValueError("Unattended directory recovery requires --directory-key-env.")
+            key = (None if multi_key and not os.environ.get(args.api_key_env)
+                   else acquire_api_key(args.key_input, args.api_key_env))
             progress = ProgressPrinter(max_requests=settings["max_requests"], quiet=args.quiet)
 
             client = ReadOnlyClient(
                 host, key, ALLOWED_PATTERNS, rpm=settings["rpm"], timeout=settings["timeout"],
                 max_requests=settings["max_requests"], max_runtime=settings["max_runtime_seconds"],
                 portal_id=None, ca_file=settings.get("ca_file"),
-                allow_http=args.allow_http, insecure_tls=args.insecure_tls, progress=progress,
+                allow_http=args.allow_http, insecure_tls=args.insecure_tls, progress=progress, multi_key=multi_key,
             )
-            if key in str(output):
+            credential_setup = (CredentialSetup(client, path=credential_file, global_env=global_key_env,
+                                global_portal=global_portal_id, non_interactive=args.non_interactive,
+                                mode=args.key_input) if multi_key else None)
+            if client.sanitize_local_text(str(output)) != str(output):
                 del key
                 raise ValueError("The API key must not appear in the output path.")
             del key
@@ -380,6 +406,16 @@ def main(argv: list[str] | None = None) -> int:
                 save_portals=args.save_portals, directory_key=args.directory_key,
                 directory_key_env=args.directory_key_env, key_input=args.key_input,
             ), max_portals=settings["max_portals"], page_size=settings["page_size"], progress=progress)
+            resolve_scope = scope_resolver
+            if credential_setup is not None:
+                def resolve_scope(topology, environment):
+                    resolved = scope_resolver(topology, environment)
+                    if not args.diagnose and resolved.outcome not in {
+                        "INTERRUPTED", "REQUEST_BUDGET_REACHED", "TIME_BUDGET_REACHED"}:
+                        credential_setup.resolve(resolved)
+                    if client.sanitize_local_text(str(output)) != str(output):
+                        raise ValueError("A credential must not appear in the output path.")
+                    return resolved
             source = {"host": client.base_url, "product": "ServiceDesk Plus On-Premises", "build_origin": "user_supplied" if answers.get("source_build") else "not_exposed", "key_expiration": "not_exposed_by_verified_read_only_api", "demo": False}
             snapshot = EnvironmentSnapshot(started.isoformat(), source, settings, manual_answers=answers)
             if not args.quiet:
@@ -394,7 +430,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_child_records=settings["max_child_records"], count_policy=settings["count_policy"],
             ), EnvironmentOptions(max_portals=settings["max_portals"], metadata_limit=settings["metadata_limit"],
                                   collect_orgusers=collect_orgusers, diagnose_only=args.diagnose), progress=progress,
-                scope_resolver=scope_resolver)
+                scope_resolver=resolve_scope)
             collector.collect(snapshot, None if args.all_portals else settings.get("portal_ids") or None)
         return _finish_assessment(snapshot, output, args.quiet)
     except (ValueError, OSError, ApiError, json.JSONDecodeError) as error:

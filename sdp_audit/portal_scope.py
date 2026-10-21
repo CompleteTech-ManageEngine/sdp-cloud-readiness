@@ -192,7 +192,7 @@ class PortalScopeResolver:
         topology.limitations = [note for note in topology.limitations
                                if not note.startswith("No portal identifiers were obtained")]
         topology.limitations.append(
-            "A verified local portal list supplements directory discovery. Every selected portal is tested with the original integration key; "
+            "A verified local portal list supplements directory discovery. Every selected portal is tested with its assigned collection credential; "
             "other portals may exist, and a saved list is not a live directory or proof of module access.")
         if len(combined) > self.max_portals:
             topology.limitations.append("The explicit max-portals limit restricted this list; omitted portals were not assessed.")
@@ -200,7 +200,7 @@ class PortalScopeResolver:
 
     def _directory(self, topology: Topology) -> Topology:
         self._directory_attempted = True
-        print("Directory key: used only for GET /api/v3/portals. All module reads keep the original integration key.", flush=True)
+        print("Directory key: used only for GET /api/v3/portals. Collection credential assignments are unchanged.", flush=True)
         mode = "auto" if self.options.directory_key_env else self.options.key_input
         if mode == "auto" and not self.options.directory_key_env:
             # Avoid silently reusing SDP_API_KEY instead of asking for a different key.
@@ -223,7 +223,7 @@ class PortalScopeResolver:
         resolved.diagnostics = original.diagnostics + resolved.diagnostics
         resolved.limitations.append(
             "A separate directory-only credential was attempted. Its identity, role assignments and relationship to the initial key are not inferred. "
-            "Only a successful directory response establishes directory visibility; module inventories use the original integration key.")
+            "Only a successful directory response establishes directory visibility; module inventories use their assigned collection credentials.")
         # Preserve known IDs if the second credential has narrower directory visibility.
         missing = [p for p in original.portals if p.id not in {q.id for q in resolved.portals}]
         if resolved.outcome in {"TIME_BUDGET_REACHED", "REQUEST_BUDGET_REACHED", "INTERRUPTED"}:
@@ -305,10 +305,15 @@ class PortalScopeResolver:
             else:
                 print("D = try one separate directory-only credential (directory visibility is not guaranteed).", flush=True)
             print("Continue this SAME run: L = all verified portal IDs/links; F = a portal scope JSON file.", flush=True)
-            print("The original integration key will scan every selected portal. Enter finishes with only already-known IDs; with none, only diagnostic reports are written.", flush=True)
+            print("Selected portals use their assigned collection credentials. Enter finishes with only already-known IDs; with none, only diagnostic reports are written.", flush=True)
             for attempt in range(3):
                 choices = "L/F/Enter" if self._directory_attempted else "D/L/F/Enter"
-                choice = input("Portal scope [" + choices + "]: ").strip().casefold()
+                try:
+                    choice = input("Portal scope [" + choices + "]: ").strip().casefold()
+                except EOFError:
+                    # An input stream closing is not a user interrupt or an
+                    # authentication receipt. Preserve the discovery outcome.
+                    break
                 if not choice:
                     if not topology.portals:
                         print("No portal IDs are available. Finishing with diagnostic reports only; no module assessment will run.", flush=True)
@@ -344,5 +349,5 @@ class PortalScopeResolver:
             self._save(topology, False)
         env.settings["portal_discovery_mode"] = topology.mode
         if topology.portals:
-            print("One assessment will cover " + str(len(topology.portals)) + " selected portals using the same integration key and global budgets.", flush=True)
+            print("One assessment will cover " + str(len(topology.portals)) + " selected portals using assigned collection credentials and shared global budgets.", flush=True)
         return topology

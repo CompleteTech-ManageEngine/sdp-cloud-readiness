@@ -2,7 +2,7 @@
 
 A local, read-only assessment of ManageEngine ServiceDesk Plus on-premises before migration to Cloud. It collects available inventory and metadata, records coverage gaps, and produces offline HTML, JSON, CSV, and Markdown reports.
 
-**Python 3.10+ · standard library only · version 2.1.2**
+**Python 3.10+ · standard library only · version 2.2.0**
 
 This is an independent assessment tool, not a ManageEngine product or migration utility.
 
@@ -18,7 +18,7 @@ python .\sdp_cloud_readiness.py
 
 Provide your ServiceDesk Plus URL and API key through the prompts. Keys are never accepted as literal command-line arguments or saved in reports. Reports go to a new timestamped directory under `sdp-assessments/` by default.
 
-The scanner uses one collection key across selected portals. The optional secondary key is for directory discovery only; separate collection keys per instance are not currently supported. Directory visibility and access to each portal's modules are checked separately. Missing permissions remain explicit coverage gaps.
+By default the scanner uses one collection key across selected portals. Use `--multi-key` for secure per-instance prompts, or `--credential-file` for explicit environment-reference assignments. An optional global credential is separate from directory discovery and instance collection. Missing access remains an explicit coverage gap. See [multiple credentials](docs/guides/multiple-credentials.md) for setup and limitations.
 
 Run an offline demonstration without credentials or network access:
 

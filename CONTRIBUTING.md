@@ -14,6 +14,8 @@ UTF-8 mode avoids platform-default text decoding differences on Windows. Five gr
 
 The initial Windows import check ran 479 tests in UTF-8 mode: 472 passed, six skipped, and `test_unavailable_discovery_cli_writes_unknown_topology_without_default` failed because it received `INTERRUPTED` instead of `PORTAL_DISCOVERY_UNAVAILABLE`. This is a recorded baseline limitation, not a passing test result. Historical Linux evidence is in [validation](docs/development/validation.md).
 
+Version 2.2.0 resolves that recovery-input EOF failure. The expanded suite and its exact local results are recorded in [multi-key validation](docs/development/multi-key-validation.md).
+
 ## Release build
 
 ```powershell
