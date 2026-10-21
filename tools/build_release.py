@@ -17,7 +17,7 @@ import zipfile
 
 
 STAMP = (2026, 10, 14, 0, 0, 0)
-BASE_FILES = ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", "examples/config/connection.example.json", "examples/config/answers.example.json",
+BASE_FILES = ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", ".env.example", "examples/config/connection.example.json", "examples/config/answers.example.json",
               "sdp_cloud_readiness.py", "__main__.py", "Run-Assessment.cmd", "Run-All-Portals.cmd", "examples/config/portals.example.json",
               "examples/config/credentials.example.json")
 PATTERNS = ("sdp_audit/*.py", "tests/*.py", "tests/fixtures/*.json", "tests/fixtures/*.md",
@@ -39,6 +39,11 @@ def write_zip(target: Path, entries: dict[str, bytes]) -> None:
 
 
 def build(root: Path, output: Path) -> dict[str, Path]:
+    example_env = (root / ".env.example").read_text(encoding="utf-8")
+    if any(line.strip() and not line.lstrip().startswith("#") and
+           ("=" not in line or line.partition("=")[2].strip())
+           for line in example_env.splitlines()):
+        raise ValueError("The packaged environment example must contain blank values only.")
     output.mkdir(parents=True, exist_ok=True)
     version_text = (root / "sdp_audit/__init__.py").read_text(encoding="utf-8")
     match = re.search(r'__version__\s*=\s*"([0-9.]+)"', version_text)
@@ -55,6 +60,8 @@ def build(root: Path, output: Path) -> dict[str, Path]:
     paths = {root / name for name in BASE_FILES}
     for pattern in PATTERNS:
         paths.update(path for path in root.glob(pattern) if path.is_file())
+    paths = {path for path in paths if path == root / ".env.example" or
+             not (path.name.startswith(".env") or path.suffix.lower() == ".env")}
     entries = {path.relative_to(root).as_posix(): path.read_bytes() for path in sorted(paths)}
     entries["sdp_cloud_readiness.pyz"] = app.read_bytes()
     inner_hashes = "".join(hashlib.sha256(data).hexdigest() + "  " + name + "\n"

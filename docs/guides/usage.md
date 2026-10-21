@@ -8,6 +8,10 @@ A local, **read-only assessment of standard ManageEngine ServiceDesk Plus on-pre
 
 The main on-premises API catalog was reviewed on **7 October 2026**; directory discovery, pagination and error handling were rechecked on **14 October 2026**. Migration rules carry their own dated source references. API availability, effective permissions, and migration behavior still need validation against your installed build and proposed Cloud target.
 
+## Default local environment
+
+Normal source and portable runs load `.env` beside the application, creating a blank 20-slot scaffold only when absent. Use `SDP_HOST` and explicit numbered key/portal-ID pairs for per-instance routing. Existing process variables take precedence; `--env-file <path>` selects another file and `--no-env` disables file loading/creation. See [local environment setup](local-env.md) for the complete syntax, scope, missing-key and conflict rules. Existing JSON settings and secure prompts remain supported.
+
 ## Per-instance credentials in 2.2.0
 
 Use `--multi-key` for secure per-instance prompts or `--credential-file` for host-bound environment-reference assignments. Unassigned instances remain unassessed; keys are never silently shared. Global Orguser collection needs an explicitly assigned credential and request context. See [setup and examples](multiple-credentials.md). Existing single-key behavior remains available.

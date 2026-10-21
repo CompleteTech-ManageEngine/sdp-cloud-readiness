@@ -6,6 +6,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 
 - [Full usage guide](guides/usage.md)
 - [Separate credentials per instance](guides/multiple-credentials.md)
+- [Default local environment file](guides/local-env.md)
 - [All portals in one run](guides/all-portals.md)
 - [Discovery and output troubleshooting](guides/troubleshooting.md)
 - [Windows API-key input](guides/windows-key-input.md)
@@ -30,3 +31,4 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [2.2.0 per-instance credentials](releases/2.2.0.md)
 - [Multi-key authorization source review](reference/multi-key-authorization.md)
 - [2.2.0 validation evidence](development/multi-key-validation.md)
+- [Local environment validation](development/local-env-validation.md)

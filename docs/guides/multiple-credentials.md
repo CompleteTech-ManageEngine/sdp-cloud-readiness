@@ -2,6 +2,10 @@
 
 Version 2.2.0 supports explicit per-instance collection credentials in one assessment on one ServiceDesk Plus host. An instance's SDAdmin key does not gain access to other instances by changing `PORTALID`. Separate servers still require separate runs.
 
+## Local credential file
+
+The default `.env` beside the application supports 20 blank numbered instance slots, with additional slots allowed. Fill each key with its explicit portal ID and set `SDP_HOST`; the loader connects these values to the same credential-binding mechanism described below. See [local environment setup](local-env.md) for exact lookup, scope, process precedence and conflict rules. Never place key values in the JSON assignment file.
+
 ## Interactive collection
 
 ```powershell

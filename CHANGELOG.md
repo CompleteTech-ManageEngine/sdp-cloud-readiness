@@ -11,6 +11,9 @@
 
 ## Unreleased
 
+- Add default local `.env` loading and non-overwriting blank setup with 20 numbered instance key/portal-ID pairs, explicit host binding, additional slots, separate directory/global credentials, path override and opt-out.
+- Preserve process environment precedence, reject conflicting assignments, and report ID-only slots as missing credentials. Bound literal parsing and exclude local environment files from release archives.
+- Add source/portable/Windows-launcher, routing, redaction, parser and packaging regressions for issue #5.
 - Replace the long root README with a quick start and move the full guide to `docs/guides/usage.md`.
 - Group documentation into guides, reference, development evidence, and release notes; add a documentation index and contributor guide.
 - Move non-secret configuration templates into `examples/config/`.
