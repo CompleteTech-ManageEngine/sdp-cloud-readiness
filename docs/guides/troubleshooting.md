@@ -165,3 +165,9 @@ that option. The ordinary assessment path already performed it. After the one
 secondary attempt, D is removed from the recovery menu. See
 [detailed boundaries](../releases/2.1.2.md). A completed two-denial
 ordinary run does not need to be repeated to establish the same result.
+
+## Different keys for different instances
+
+An instance SDAdmin key cannot gain access to other instances through a `PORTALID` header. Use [per-instance credential setup](multiple-credentials.md). `CREDENTIAL_MISSING` means no key was assigned, not an empty instance. `AUTHENTICATION_FAILED` in multi-key mode stops the failed key's assignments while other keys continue. Inspect each module's coverage even when authentication succeeds.
+
+Missing or denied Orguser access is separate from portal discovery and instance access. Assign an explicitly authorized global key and verified request context, or retain that global coverage gap. A directory-only key cannot be used for Orguser collection.

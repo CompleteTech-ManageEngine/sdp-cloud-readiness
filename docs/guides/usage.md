@@ -2,11 +2,15 @@
 
 For a short introduction, see the [repository README](../../README.md). Run all commands below from the repository or extracted-release root. Examples using an adjacent `.pyz` apply to an extracted release; in a source checkout use `sdp_cloud_readiness.py`, or build first and use `dist/sdp_cloud_readiness.pyz`.
 
-A local, **read-only assessment of standard ManageEngine ServiceDesk Plus on-premises before migration to Cloud**. Normally, provide only the source URL and integration API key. Version **2.1.2** attempts to discover the portal/ESM topology visible to that key, assesses discovered portals within one shared request budget, and produces a consolidated report with per-portal findings and explicit coverage gaps.
+A local, **read-only assessment of standard ManageEngine ServiceDesk Plus on-premises before migration to Cloud**. Normally, provide only the source URL and integration API key. Version **2.2.0** attempts to discover the portal/ESM topology visible to that key, assesses discovered portals within one shared request budget, and produces a consolidated report with per-portal findings and explicit coverage gaps.
 
 **Python 3.10 or newer. No third-party Python packages.** The source tree, portable `.pyz`, and Windows launcher run the same application. This is an independent assessment tool, not a ManageEngine product or a migration utility.
 
 The main on-premises API catalog was reviewed on **7 October 2026**; directory discovery, pagination and error handling were rechecked on **14 October 2026**. Migration rules carry their own dated source references. API availability, effective permissions, and migration behavior still need validation against your installed build and proposed Cloud target.
+
+## Per-instance credentials in 2.2.0
+
+Use `--multi-key` for secure per-instance prompts or `--credential-file` for host-bound environment-reference assignments. Unassigned instances remain unassessed; keys are never silently shared. Global Orguser collection needs an explicitly assigned credential and request context. See [setup and examples](multiple-credentials.md). Existing single-key behavior remains available.
 
 ## Diagnostic credential recovery fixes in 2.1.2
 
@@ -102,7 +106,7 @@ Portal scope [D/L/F/Enter]:
 
 After the secondary directory credential has already been attempted, `D` is removed and the prompt is `Portal scope [L/F/Enter]`. Blank input never means automatic discovery succeeded.
 
-**D — authorized directory credential.** A second masked/hidden key is used exclusively for the existing `GET /api/v3/portals` operation. It must actually have permission for that operation. The original integration key still performs every Requests, Projects, metadata and other module read. Both credentials share one HTTP client, rate limiter, attempt budget and time budget. No permission is changed and no key is saved. Successful directory-key authentication is not presented as proof that the original integration key can read every portal.
+**D — authorized directory credential.** A second masked/hidden key is used exclusively for the existing `GET /api/v3/portals` operation. It must actually have permission for that operation. Collection credentials perform Requests, Projects, metadata and other module reads: the original key in single-key mode, or explicit instance assignments in multi-key mode. Both credentials share one HTTP client, rate limiter, attempt budget and time budget. No permission is changed and no key is saved. Successful directory-key authentication is not presented as proof that the original integration key can read every portal.
 
 **L — enter the entire verified list once.** Provide the actual numeric IDs, separated by commas, or same-host instance links with a `PORTALID` query parameter. The links are parsed locally, never followed. There is no numeric-range expansion or guessing. All selected portals are assessed together; you do not switch the browser, replace an ID, restart the scanner or merge reports. The user-supplied list remains explicitly distinguished from a complete API-enumerated directory.
 

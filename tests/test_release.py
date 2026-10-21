@@ -105,6 +105,9 @@ class ReleaseTests(unittest.TestCase):
                 "docs/development/validation.md", "docs/development/release-verification.md",
                 "docs/reference/api-catalog.md", "docs/reference/diagnostics-and-coverage.md",
                 "docs/releases/2.1.1.md", "docs/releases/2.1.2.md", "examples/config/README.md",
+                "sdp_audit/credential_setup.py", "examples/config/credentials.example.json",
+                "docs/guides/multiple-credentials.md", "docs/reference/multi-key-authorization.md",
+                "docs/releases/2.2.0.md", "tests/test_multi_credentials.py",
             }
             self.assertTrue({prefix + name for name in required}.issubset(names))
             self.assertTrue(all(name.startswith(prefix) and ".." not in Path(name).parts for name in names))
@@ -133,6 +136,19 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(document["environment"]["topology"]["mode"], "assisted")
         self.assertFalse(document["environment"]["topology"]["complete"])
         self.assertEqual(len(document["questions"]), 7)
+
+    def test_portable_multi_key_demo_uses_separate_scopes_without_secrets(self):
+        folder = self.runtime / "multi-key-output"
+        self.invoke("--demo", "--demo-scenario", "multi_key", "--output-dir", str(folder))
+        report = next(folder.glob("*/assessment.json"))
+        document = json.loads(report.read_text())
+        scopes = document["environment"]["permissions"]["credential_scopes"]
+        self.assertEqual(len(scopes), 6)
+        self.assertEqual(next(row["status"] for row in scopes if row["scope"] == "global"), "valid")
+        for path in report.parent.iterdir():
+            if path.suffix in {".json", ".html", ".md", ".csv"}:
+                self.assertNotIn("synthetic-portal-key-", path.read_text(encoding="utf-8"))
+                self.assertNotIn("synthetic-org-key", path.read_text(encoding="utf-8"))
 
 
     def test_customer_reports_environment_files_and_caches_are_excluded(self):

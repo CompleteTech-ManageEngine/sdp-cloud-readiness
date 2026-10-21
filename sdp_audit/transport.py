@@ -145,6 +145,7 @@ class ApiError(Exception):
         content_type: str | None = None,
         has_sdp_status: bool = False,
         transport_detail: str | None = None,
+        credential_scope: str | None = None,
     ) -> None:
         defaults = _ERROR_DEFAULTS.get(kind, ("UNKNOWN_API_ERROR", "unknown", False))
         self.kind = kind
@@ -165,6 +166,7 @@ class ApiError(Exception):
         self.content_type = content_type
         self.has_sdp_status = bool(has_sdp_status)
         self.transport_detail = transport_detail
+        self.credential_scope = credential_scope
         super().__init__(message)
 
     def to_dict(self) -> dict[str, Any]:
@@ -187,6 +189,7 @@ class ApiError(Exception):
             "content_type": self.content_type,
             "has_sdp_status": self.has_sdp_status,
             "transport_detail": self.transport_detail,
+            "credential_scope": self.credential_scope,
         }
 
 
@@ -241,6 +244,15 @@ def _positive_number(name: str, value: Any, maximum: float | None = None) -> flo
         suffix = f" no greater than {maximum:g}" if maximum else ""
         raise ValueError(f"{name} must be a positive finite number{suffix}.")
     return number
+
+
+def _binding_host(base_url: str, allow_http: bool) -> str:
+    normalized = _normalize_base_url(base_url, allow_http)
+    parts = urllib.parse.urlsplit(normalized)
+    if (parts.scheme, parts.port) in {("https", 443), ("http", 80)}:
+        host = "[" + parts.hostname + "]" if ":" in parts.hostname else parts.hostname
+        return urllib.parse.urlunsplit((parts.scheme, host, parts.path, "", ""))
+    return normalized
 
 
 def _normalize_base_url(base_url: str, allow_http: bool) -> str:
@@ -466,7 +478,7 @@ class ReadOnlyClient:
     def __init__(
         self,
         base_url: str,
-        api_key: str,
+        api_key: str | None,
         allowed_patterns: list[str],
         rpm: float = 30.0,
         timeout: float = 30.0,
@@ -479,20 +491,28 @@ class ReadOnlyClient:
         progress: Callable[[dict[str, Any]], None] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
+        multi_key: bool = False,
     ) -> None:
-        if not isinstance(api_key, str) or not api_key or len(api_key) > 8192:
+        self.multi_key = multi_key
+        self._portal_keys: dict[str, str] = {}
+        self._global_key: str | None = None
+        self._global_portal_id: str | None = None
+        self._credential_states: dict[str, str] = {}
+        if api_key is None and multi_key:
+            api_key = ""
+        if not isinstance(api_key, str) or (not api_key and not multi_key) or len(api_key) > 8192:
             raise ValueError("Provide a nonempty API key of at most 8192 characters.")
         if any(ord(ch) < 33 or ord(ch) > 126 for ch in api_key):
             raise ValueError("The API key must contain printable ASCII characters without whitespace.")
         self.base_url = _normalize_base_url(base_url, allow_http)
-        if api_key in self.base_url:
+        if api_key and api_key in self.base_url:
             raise ValueError("The API key must not appear in the base URL.")
         self._api_key = api_key
         self._secret_forms = tuple(sorted({
             api_key,
             urllib.parse.quote(api_key, safe=""),
             urllib.parse.quote_plus(api_key, safe=""),
-        }, key=len, reverse=True))
+        } - {""}, key=len, reverse=True))
         self.rpm = _positive_number("rpm", rpm, 60)
         self.timeout = _positive_number("timeout", timeout)
         self.max_runtime = _positive_number("max_runtime", max_runtime)
@@ -541,23 +561,82 @@ class ReadOnlyClient:
         self._last_response: dict[str, Any] = {}
         self._authentication_failed = False
         self._directory_authentication = "unverified"
+        self._directory_credential_used = False
         self._allow_http = bool(allow_http)
         self._insecure_tls = bool(insecure_tls)
 
     def __repr__(self) -> str:
         return f"ReadOnlyClient(rpm={self.rpm:g}, max_requests={self.max_requests}, credentials=<redacted>)"
 
+    def register_credential(self, key: str) -> None:
+        """Register redaction before any request, without granting a scope."""
+        if (not isinstance(key, str) or not key or len(key) > 8192
+                or any(ord(ch) < 33 or ord(ch) > 126 for ch in key)):
+            raise ValueError("Invalid collection credential.")
+        if key in self.base_url:
+            raise ValueError("A credential must not appear in the source URL.")
+        forms = {key, urllib.parse.quote(key, safe=""), urllib.parse.quote_plus(key, safe="")}
+        self._secret_forms = tuple(sorted(set(self._secret_forms) | forms, key=len, reverse=True))
+
+    def bind_portal_credential(self, host: str, portal_id: str, key: str) -> None:
+        if not self.multi_key or _binding_host(host, self._allow_http) != _binding_host(self.base_url, self._allow_http):
+            raise ValueError("Credential binding must match this multi-key source host and application context.")
+        self.register_credential(key)
+        portal = self._portal_value(portal_id)
+        if portal is None or int(portal) <= 0:
+            raise ValueError("A portal credential requires an explicit portal ID.")
+        portal = str(int(portal))
+        if portal in self._portal_keys and self._portal_keys[portal] != key:
+            raise ValueError("Conflicting portal credential assignments.")
+        self._portal_keys[portal] = key
+
+    def bind_global_credential(self, host: str, portal_id: str, key: str) -> None:
+        if not self.multi_key or _binding_host(host, self._allow_http) != _binding_host(self.base_url, self._allow_http):
+            raise ValueError("Global credential binding must match this multi-key source host.")
+        self.register_credential(key)
+        portal = self._portal_value(portal_id)
+        if portal is None or int(portal) <= 0:
+            raise ValueError("Global collection requires an explicit documented portal context.")
+        portal = str(int(portal))
+        if self._global_key is not None and (self._global_key != key or self._global_portal_id != portal):
+            raise ValueError("Conflicting global credential assignments.")
+        self._global_key, self._global_portal_id = key, portal
+
+    @property
+    def global_portal_id(self) -> str | None:
+        return self._global_portal_id
+
+    def credential_status(self, portal_id: str | None = None, *, global_scope: bool = False) -> str:
+        key = self._global_key if global_scope else self._portal_keys.get(portal_id) if portal_id else self._api_key
+        return self._credential_states.get(key, "unverified") if key else "missing"
+
+    @property
+    def credential_coverage(self) -> dict[str, Any]:
+        coverage = {"mode": "per_instance" if self.multi_key else "single_key",
+                "directory": self.credential_status(),
+                "global": self.credential_status(global_scope=True),
+                "portals": {portal: self.credential_status(portal) for portal in self._portal_keys}}
+        if self._directory_credential_used:
+            coverage["directory_recovery"] = self._directory_authentication
+        return coverage
+
     @property
     def stats(self) -> dict[str, Any]:
+        authentication = "failed" if self._authentication_failed else "valid" if self._authenticated_successes else "unverified"
+        if self.multi_key:
+            states = set(self._credential_states.values())
+            authentication = ("mixed" if {"failed", "valid"}.issubset(states) else
+                              "failed" if "failed" in states else "valid" if "valid" in states else "unverified")
         return {
             "requests": self._requests,
             "directory_key_authentication": self._directory_authentication,
+            "credential_coverage": self.credential_coverage,
             "successful_requests": self._successes,
             "retries": self._retries,
             "failures_by_kind": dict(self._failures),
             "failures_by_classification": dict(self._failures_by_classification),
             "requests_by_scope": dict(self._requests_by_scope),
-            "authentication": "failed" if self._authentication_failed else "valid" if self._authenticated_successes else "unverified",
+            "authentication": authentication,
             "elapsed_seconds": round(max(0.0, self._clock() - self._started), 3),
             "wait_seconds": round(self._wait_seconds, 3),
             "requests_per_minute_policy": self.rpm,
@@ -719,6 +798,7 @@ class ReadOnlyClient:
             raise ValueError("A directory key must not appear in the base URL.")
         with self._lock:
             self._secret_forms = tuple(sorted(set(self._secret_forms) | forms, key=len, reverse=True))
+            self._directory_credential_used = True
         return DirectoryReader(self, api_key)
 
     def _redact_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -822,18 +902,34 @@ class ReadOnlyClient:
             "endpoint": path,
             "endpoint_name": self._context_value(endpoint_name),
             "module": self._context_value(module),
+            "credential_scope": ("directory_key" if _directory_key is not None else
+                                 "global_key" if self.multi_key and (path == "/orgusers" or path.startswith("/orgusers/")) else
+                                 "portal_key" if self.multi_key and effective_portal is not None else "integration_key"),
         }
+        credential = _directory_key if _directory_key is not None else self._api_key
+        if self.multi_key and _directory_key is None:
+            if path == "/portals" and effective_portal is None:
+                credential = self._api_key
+            elif (path == "/orgusers" or path.startswith("/orgusers/")) and effective_portal == self._global_portal_id:
+                credential = self._global_key
+            elif path == "/orgusers" or path.startswith("/orgusers/"):
+                raise ValueError("Global resource request does not match its explicit context.")
+            else:
+                credential = self._portal_keys.get(effective_portal)
+        if not credential:
+            raise ApiError("credential_missing", "No credential is assigned to this operation's scope.",
+                           classification="CREDENTIAL_MISSING", cause="credential_configuration", **context)
         with self._lock:
             self._active_context = context
             self._last_response = {}
-            if self._authentication_failed:
+            if (self._credential_states.get(credential) == "failed" if self.multi_key else self._authentication_failed):
                 raise ApiError("authentication", "Authentication previously failed; no further requests are permitted.", **context)
             retries = 0
             while True:
                 self._wait_until(self._next_attempt)
                 remaining = self._check_budget()
                 headers = {
-                    "authtoken": _directory_key if _directory_key is not None else self._api_key,
+                    "authtoken": credential,
                     "Accept": "application/vnd.manageengine.sdp.v3+json",
                     "Accept-Encoding": "identity",
                     "Content-Type": "application/x-www-form-urlencoded",
@@ -915,6 +1011,7 @@ class ReadOnlyClient:
                             # An arbitrary HTTP 200 JSON document (e.g. from a
                             # gateway) is not evidence that SDP accepted the key.
                             if 2000 in codes:
+                                self._credential_states[credential] = "valid"
                                 if _directory_key is None:
                                     self._authenticated_successes += 1
                                 else:
@@ -984,15 +1081,17 @@ class ReadOnlyClient:
                 error.endpoint = path
                 error.endpoint_name = context["endpoint_name"]
                 error.module = context["module"]
+                error.credential_scope = context["credential_scope"]
                 self._failures[error.kind] = self._failures.get(error.kind, 0) + 1
                 classification = error.classification
                 self._failures_by_classification[classification] = self._failures_by_classification.get(classification, 0) + 1
                 self._last_response = error.to_dict()
                 self._emit("error", **error.to_dict())
                 if error.kind == "authentication":
-                    if _directory_key is None:
+                    self._credential_states[credential] = "failed"
+                    if _directory_key is None and not self.multi_key:
                         self._authentication_failed = True
-                    else:
+                    elif _directory_key is not None:
                         self._directory_authentication = "failed"
                 if not transient or retries >= _RETRY_LIMIT:
                     raise error from None

@@ -5,6 +5,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 ## User guides
 
 - [Full usage guide](guides/usage.md)
+- [Separate credentials per instance](guides/multiple-credentials.md)
 - [All portals in one run](guides/all-portals.md)
 - [Discovery and output troubleshooting](guides/troubleshooting.md)
 - [Windows API-key input](guides/windows-key-input.md)
@@ -25,3 +26,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Changelog](../CHANGELOG.md)
 - [2.1.1 diagnostic context and count policy](releases/2.1.1.md)
 - [2.1.2 directory credential recovery](releases/2.1.2.md)
+
+- [2.2.0 per-instance credentials](releases/2.2.0.md)
+- [Multi-key authorization source review](reference/multi-key-authorization.md)
+- [2.2.0 validation evidence](development/multi-key-validation.md)

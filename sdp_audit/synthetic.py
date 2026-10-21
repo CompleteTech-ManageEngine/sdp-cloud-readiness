@@ -44,6 +44,10 @@ SYNTHETIC_SENSITIVE_MARKERS = (
 
 
 _SCENARIOS: dict[str, dict[str, Any]] = {
+    "multi_key": {"topology": "multi", "multi_key": True,
+        "portal_credentials": {str(i): "synthetic-portal-key-" + str(i) for i in range(1, 5)},
+        "global_credential": "synthetic-org-key", "global_context": "1",
+        "description": "Explicit per-instance keys and a separately assigned global key; one shared transport."},
     "single": {"topology": "single", "description": "One visible portal with real GET collection and field metadata."},
     "multi": {"topology": "multi", "description": "IT, HR, Facilities and inaccessible Security; mixed permissions, module limits and metadata strategies."},
     "recovery": {"topology": "multi", "errors": {"global:/portals": {
@@ -407,6 +411,12 @@ class SyntheticServer:
             raise KeyboardInterrupt()
         if method != "GET" or request.data is not None:
             raise AssertionError("Synthetic assessment attempted a non-GET or a request body.")
+        if self.config.get("multi_key"):
+            expected = (SYNTHETIC_KEY if path == "/portals" else
+                        self.config.get("global_credential") if path == "/orgusers" else
+                        self.config.get("portal_credentials", {}).get(portal))
+            if not expected or request.get_header("Authtoken") != expected:
+                return _error({"http_status": 401, "api_code": 4001, "message": "Invalid API key"})
         if not isinstance(data, Mapping):
             return _error({"http_status": 400, "api_code": 4021, "message": "Data type mismatch"})
         key = (portal if portal is not None else "global") + ":" + path
@@ -476,12 +486,13 @@ def create_synthetic_client(
     scenario: str | Mapping[str, Any] = "multi", *, max_requests: int = 500,
     max_runtime: float = 1200, rpm: float = 30, api_key: str = SYNTHETIC_KEY,
     progress: Callable[[dict[str, Any]], None] | None = None,
+    multi_key: bool = False,
 ) -> tuple[ReadOnlyClient, SyntheticServer, SyntheticClock]:
     clock = SyntheticClock()
     server = SyntheticServer(scenario, clock=clock)
     client = ReadOnlyClient(SYNTHETIC_HOST, api_key, ALLOWED_PATTERNS,
                             rpm=rpm, max_requests=max_requests, max_runtime=max_runtime,
-                            progress=progress, clock=clock, sleep=clock.sleep)
+                            progress=progress, clock=clock, sleep=clock.sleep, multi_key=multi_key)
     client._opener = server
     return client, server, clock
 
@@ -529,8 +540,13 @@ def run_synthetic(
     settings["max_minutes"] = settings["max_runtime_seconds"] / 60
     client, server, _ = create_synthetic_client(
         config, max_requests=settings["max_requests"], max_runtime=settings["max_runtime_seconds"],
-        rpm=settings["rpm"], progress=progress,
+        rpm=settings["rpm"], progress=progress, multi_key=bool(config.get("multi_key")),
     )
+    if config.get("multi_key"):
+        for pid, key in config.get("portal_credentials", {}).items():
+            client.bind_portal_credential(SYNTHETIC_HOST, pid, key)
+        if config.get("global_credential"):
+            client.bind_global_credential(SYNTHETIC_HOST, config["global_context"], config["global_credential"])
     answers = copy.deepcopy(demo_snapshot().manual_answers)
     answers.update(source_build=15100)
     answers.update(config.get("manual_answers", {}))

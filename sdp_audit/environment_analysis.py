@@ -138,6 +138,24 @@ def _portal_identifier(value: Any) -> str | None:
     return None
 
 
+def _credential_scopes(environment: EnvironmentSnapshot) -> list[dict[str, str]]:
+    coverage = environment.stats.get("credential_coverage", {})
+    if coverage.get("mode") != "per_instance":
+        return []
+    def status(value: Any) -> str:
+        return value if isinstance(value, str) and value in {"missing", "unverified", "valid", "failed"} else "unverified"
+    rows = [{"scope": "directory", "status": status(coverage.get("directory"))},
+            {"scope": "global", "status": status(coverage.get("global"))}]
+    if "directory_recovery" in coverage:
+        rows.insert(1, {"scope": "directory_recovery", "status": status(coverage["directory_recovery"])})
+    for pid in environment.portals:
+        identifier = _portal_identifier(pid)
+        if identifier is not None:
+            rows.append({"scope": "portal:" + identifier,
+                         "status": status(coverage.get("portals", {}).get(pid))})
+    return rows
+
+
 def _environment_source(source: Mapping[str, Any]) -> dict[str, Any]:
     result = _safe_source(dict(source))
     if source.get("key_expiration") == "not_exposed_by_verified_read_only_api":
@@ -145,7 +163,7 @@ def _environment_source(source: Mapping[str, Any]) -> dict[str, Any]:
     orgusers_states = {
         "not_selected", "not_collected_for_explicit_portal_targeting",
         "multiple_instances_not_observed", "no_accessible_portal_context_confirmed",
-        "once_for_environment",
+        "once_for_environment", "credential_missing",
     }
     if isinstance(source.get("orgusers_collection"), str) and source["orgusers_collection"] in orgusers_states:
         result["orgusers_collection"] = source["orgusers_collection"]
@@ -210,7 +228,9 @@ def _diagnostics(items: Any, portal: PortalInfo | None = None) -> list[dict[str,
         if shape is not None:
             safe["response_shape"] = shape
         if "credential_scope" in safe:
-            safe["credential_scope"] = "directory_key" if safe["credential_scope"] == "directory_key" else "integration_key"
+            value = safe["credential_scope"]
+            safe["credential_scope"] = (value if isinstance(value, str) and value in
+                                        {"directory_key", "portal_key", "global_key"} else "integration_key")
         if portal:
             safe["portal_id"], safe["portal_name"] = portal.id, _label(portal.name, "Portal " + portal.id)
         result.append(safe)
@@ -678,7 +698,12 @@ def analyze_environment(environment: EnvironmentSnapshot) -> Assessment:
                     global_seen.add(dataset.key)
                     global_coverage.append(_coverage(dataset, None))
                 continue
-            portal_coverage.append(_coverage(dataset, portal))
+            row = _coverage(dataset, portal)
+            credentials = environment.stats.get("credential_coverage", {})
+            if credentials.get("mode") == "per_instance":
+                status = credentials.get("portals", {}).get(portal_id, "missing")
+                row["credential_status"] = status if status in {"missing", "failed", "valid", "unverified"} else "unverified"
+            portal_coverage.append(row)
         portal_diagnostics = _diagnostics(portal.diagnostics, portal)
         portal_diagnostics.extend(item for row in portal_coverage for item in row["diagnostics"])
         portal_diagnostics.extend(item for inventory in fields for item in inventory["diagnostics"])
@@ -794,6 +819,7 @@ def analyze_environment(environment: EnvironmentSnapshot) -> Assessment:
                          "diagnostics": _diagnostics(topology.diagnostics)},
             "volume_by_module": volumes, "risk_rollup": _risk_rollup(findings),
             "permissions": {"authentication": environment.authentication,
+                            "credential_scopes": _credential_scopes(environment),
                             "integration_key_expiration": "NOT_ASSESSED",
                             "key_expiration_note": "No verified read-only expiration mechanism is implemented. Expiration is neither inferred nor required for the assessment.",
                             "orgusers_collection": _environment_source(environment.source).get("orgusers_collection", "not_established"),

@@ -19,6 +19,7 @@ from .response_contract import PARSE_REASONS, safe_shape
 from .topology import topology_scope_evidence
 
 _MESSAGES = {
+    "CREDENTIAL_MISSING": "No credential was assigned to this operation's scope; no read was sent.",
     "SUCCESS": "Read succeeded.", "EMPTY": "The API returned a successful empty list for this key.",
     "COMPLETE": "The API-visible directory traversal completed.", "COLLECTING": "Discovery is in progress.",
     "NOT_STARTED": "No read was started.", "INCOMPLETE": "Directory coverage could not be established completely.",
@@ -49,11 +50,13 @@ _TRANSPORT = {"TLS_CERTIFICATE_VERIFICATION_FAILED", "TLS_NEGOTIATION_FAILED", "
               "CONNECTION_TIMED_OUT", "CONNECTION_REFUSED", "CONNECTION_RESET", "CONNECTION_FAILED",
               "REDIRECT_BLOCKED"}
 _CAUSES = {"unknown", "authentication", "authorization", "configuration", "portal_access",
+           "credential_configuration",
            "module_availability", "licensing_or_module_availability", "api_compatibility",
            "api_compatibility_or_resource_availability", "api_compatibility_or_scanner", "rate_limit",
            "network", "tls_configuration", "server", "scanner_budget", "scanner_limit",
            "pagination_integrity", "user_interruption"}
 _KINDS = {"authentication", "forbidden", "portal_context", "portal_access", "module_disabled",
+          "credential_missing",
           "license", "unsupported", "version", "throttled", "network", "tls", "server", "invalid_response"}
 _LOGICAL = re.compile(r"[a-z][a-z0-9_.:-]{0,127}", re.ASCII)
 _KNOWN_LOGICAL = frozenset({spec.key for spec in RESOURCES + GLOBAL_RESOURCES}
@@ -114,7 +117,8 @@ def safe_diagnostic(item: Mapping[str, Any]) -> dict[str, Any]:
     if response_format == "html" and classification == "PARSE_ERROR":
         message = "Expected a JSON API object but received HTML; no response body was saved."
     result = {
-        "credential_scope": "directory_key" if item.get("credential_scope") == "directory_key" else "integration_key",
+        "credential_scope": (item["credential_scope"] if isinstance(item.get("credential_scope"), str) and item.get("credential_scope") in
+                             {"directory_key", "portal_key", "global_key"} else "integration_key"),
         "classification": classification, "http_status": number, "api_codes": codes,
         "kind": kind, "cause": cause, "portal_id": portal, "endpoint": path,
         "message": message, "api_message": "; ".join(recognized) or None,
@@ -151,7 +155,8 @@ def guidance(item: Mapping[str, Any], *, authentication: str | None = None) -> s
     if data["transport_detail"] == "REDIRECT_BLOCKED":
         return "Check the final API base path for this operation. Redirects are deliberately not followed and the Location header is not printed." + auth_note
     if classification == "AUTHENTICATION_FAILED":
-        credential = "directory-only credential" if data["credential_scope"] == "directory_key" else "integration key/account"
+        credential = {"directory_key": "directory-only credential", "portal_key": "assigned instance credential",
+                      "global_key": "assigned global credential"}.get(data["credential_scope"], "integration key/account")
         return "Verify the " + credential + " and whether an upstream gateway rejected this operation. HTTP 401 alone does not identify the rejecting component."
     if classification == "PERMISSION_DENIED":
         if directory:

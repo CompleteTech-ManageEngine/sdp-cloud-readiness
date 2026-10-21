@@ -691,8 +691,10 @@ def _render_environment_html(data: Mapping[str, Any]) -> str:
         "does not establish whether the module is licensed or enabled.</p>",
         _table_html(_CAPABILITY_HEADINGS, sections["capabilities"]), "</section>",
         "<section><h2>Portal access gaps and permissions diagnostics</h2>",
+        _table_html(["Credential scope", "Authentication status"],
+                    [[row["scope"], row["status"]] for row in env.get("permissions", {}).get("credential_scopes", [])]),
         _html_key_values({key: value for key, value in env.get("permissions", {}).items()
-                          if key not in {"denied_operations", "unsupported_operations"}}),
+                          if key not in {"denied_operations", "unsupported_operations", "credential_scopes"}}),
         "<p>Generic HTTP 403 identifies a denied operation. It does not establish a required role. "
         "Unsupported endpoints, unavailable modules and missing portal context remain distinct. Earlier failed fallback attempts "
         "remain in the diagnostic history even when the final collection succeeds.</p>",
@@ -797,7 +799,9 @@ def _render_environment_markdown(data: Mapping[str, Any]) -> str:
     lines.extend(["## Portal access gaps and permissions diagnostics", "",
                   "A generic 403 does not establish a required role. Historical fallback failures remain available even when the final read succeeds.", ""]
                  + _md_key_values({key: value for key, value in env.get("permissions", {}).items()
-                                   if key not in {"denied_operations", "unsupported_operations"}})
+                                   if key not in {"denied_operations", "unsupported_operations", "credential_scopes"}})
+                 + _table_md(["Credential scope", "Authentication status"],
+                             [[row["scope"], row["status"]] for row in env.get("permissions", {}).get("credential_scopes", [])])
                  + _table_md(_DIAGNOSTIC_HEADINGS, _diagnostic_rows(data)))
     lines.extend(["## Per-portal migration risks", ""])
     for portal in data.get("portals", []):

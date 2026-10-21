@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.0
+
+- Add explicit per-instance collection credentials, secure prompts and host-bound environment-reference configuration.
+- Isolate authentication failures by credential while retaining one transport and global budgets.
+- Separate optional ESM global-resource credentials from directory and instance scopes.
+- Report credential coverage without secrets; add multi-key synthetic and packaged demonstrations.
+- Preserve unavailable discovery at recovery-input EOF instead of marking it interrupted.
+
+
 ## Unreleased
 
 - Replace the long root README with a quick start and move the full guide to `docs/guides/usage.md`.
