@@ -1,0 +1,5 @@
+{
+  "scenario": "multi",
+  "topology": "multi",
+  "description": "IT, HR, Facilities and inaccessible Security; mixed permissions, module limits and metadata strategies."
+}

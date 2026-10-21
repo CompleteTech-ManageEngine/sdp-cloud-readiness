@@ -1,0 +1,5 @@
+{
+  "scenario": "udf_primary",
+  "topology": "single",
+  "description": "Observed Request-template and current Asset type metadata; module-selected Space UDF reads supported by the fixture."
+}

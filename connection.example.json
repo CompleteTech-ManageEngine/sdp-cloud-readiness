@@ -1,0 +1,19 @@
+{
+  "host": "https://helpdesk.example.org:8443",
+  "portal_id": null,
+  "portal_ids": [],
+  "ca_file": null,
+  "rpm": 30,
+  "page_size": 100,
+  "max_records": 5000,
+  "detail_limit": 20,
+  "metadata_limit": 20,
+  "max_portals": 100,
+  "subresource_parents": 10,
+  "max_child_records": 200,
+  "max_requests": 500,
+  "max_minutes": 20,
+  "timeout": 30,
+  "portal_file": null,
+  "count_policy": "first"
+}

@@ -1,0 +1,14 @@
+{
+  "source_build": null,
+  "target_edition": null,
+  "target_region": null,
+  "api_scope_confirmed": null,
+  "required_history_years": null,
+  "required_audit_years": null,
+  "needs_power_bi": null,
+  "max_dashboard_lag_minutes": null,
+  "uses_local_scripts": null,
+  "needs_full_descriptions": null,
+  "requires_legacy_history": null,
+  "full_backup_requirement": null
+}

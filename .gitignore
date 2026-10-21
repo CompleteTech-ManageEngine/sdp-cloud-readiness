@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+dist/
+sdp-assessments/
+.env
+.env.*
+!.env.example
+connection.json
+answers.json
+portals.json

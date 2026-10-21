@@ -1,0 +1,11 @@
+{
+  "scenario": "portal_discovery_unavailable",
+  "topology": "multi",
+  "errors": {
+    "global:/portals": {
+      "http_status": 404,
+      "api_code": 4007,
+      "message": "Invalid URL"
+    }
+  }
+}

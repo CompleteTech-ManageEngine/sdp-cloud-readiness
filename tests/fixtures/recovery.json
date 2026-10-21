@@ -1,0 +1,18 @@
+{
+  "scenario": "recovery",
+  "topology": "multi",
+  "errors": {
+    "global:/portals": {
+      "http_status": 403,
+      "api_code": 4002,
+      "message": "User does not have this permission"
+    }
+  },
+  "verified_portal_ids": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "description": "Denied directory recovered by an explicitly supplied synthetic full list in the same collector; never a guessed list."
+}

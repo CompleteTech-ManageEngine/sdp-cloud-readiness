@@ -1,0 +1,13 @@
+{
+  "scenario": "budget_exhaustion",
+  "topology": "multi",
+  "modules": [
+    "requests",
+    "projects",
+    "assets"
+  ],
+  "settings": {
+    "max_requests": 8,
+    "page_size": 2
+  }
+}

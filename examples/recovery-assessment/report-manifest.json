@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "tool_version": "2.1.2",
+  "verified_at_utc": "2026-10-14T12:02:31.715712+00:00",
+  "verification": "Regular files reopened; byte lengths and SHA-256 checked. Point-in-time check only; later retention is not guaranteed.",
+  "files": [
+    {
+      "name": "report.html",
+      "bytes": 819872,
+      "sha256": "745e43799c0aa171b1b810c7203a7f3756a3611570e312745ec273a3f49fa20d",
+      "individual_file_verified": true
+    },
+    {
+      "name": "report.md",
+      "bytes": 514740,
+      "sha256": "da5afea5a14ecda1d7095d636c5912d5b9fb64abfbce75078614ba793dba86ed",
+      "individual_file_verified": true
+    },
+    {
+      "name": "assessment.json",
+      "bytes": 1540986,
+      "sha256": "fcd90ef3568981a0ac4d1f93a965ca86e781299ca6406e67cc59afecbc4c3cb8",
+      "individual_file_verified": true
+    },
+    {
+      "name": "findings.csv",
+      "bytes": 159871,
+      "sha256": "c4a3ee2714f763606968c850707de1e5cf7bc02537c7fb9456f52e08ed6d41b7",
+      "individual_file_verified": true
+    },
+    {
+      "name": "coverage.csv",
+      "bytes": 50882,
+      "sha256": "d3886e1d8f2ccb1d7f26ec0dbec644680f2cb78289a65be09a53864afb6d405c",
+      "individual_file_verified": true
+    },
+    {
+      "name": "vendor-questions.md",
+      "bytes": 126259,
+      "sha256": "b58ead0ffd6f3ae559a601e01f7cd21d7560d1c4bda3683bf337827f8dcea580",
+      "individual_file_verified": true
+    },
+    {
+      "name": "diagnostics.json",
+      "bytes": 9558,
+      "sha256": "840a05c25c4a8bd0200f849774652d36f7d598fe780f1aa9a8a1cd69cfac23f6",
+      "individual_file_verified": true
+    }
+  ],
+  "individual_file_errors": [],
+  "zip_contents": "Explicit sanitized report documents and this manifest only; no source files or directory sweep."
+}

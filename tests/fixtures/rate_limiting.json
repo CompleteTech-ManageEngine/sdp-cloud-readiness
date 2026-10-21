@@ -1,0 +1,16 @@
+{
+  "scenario": "rate_limiting",
+  "topology": "single",
+  "scripted": {
+    "global:/portals": [
+      {
+        "http_status": 429,
+        "api_code": 4015,
+        "message": "API Rate Limit reached",
+        "headers": {
+          "Retry-After": "7"
+        }
+      }
+    ]
+  }
+}

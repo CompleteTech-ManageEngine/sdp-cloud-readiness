@@ -1,0 +1,11 @@
+{
+  "scenario": "module_not_enabled",
+  "topology": "single",
+  "errors": {
+    "1:/problems": {
+      "http_status": 403,
+      "api_code": 4002,
+      "message": "The Problems module is not enabled"
+    }
+  }
+}

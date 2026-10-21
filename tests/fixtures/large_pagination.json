@@ -1,0 +1,17 @@
+{
+  "scenario": "large_pagination",
+  "topology": "multi",
+  "record_counts": {
+    "1": {
+      "requests": 1207
+    },
+    "2": {
+      "requests": 613
+    }
+  },
+  "settings": {
+    "page_size": 100,
+    "max_records": 0,
+    "detail_limit": 2
+  }
+}

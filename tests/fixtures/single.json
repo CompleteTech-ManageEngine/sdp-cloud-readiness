@@ -1,0 +1,5 @@
+{
+  "scenario": "single",
+  "topology": "single",
+  "description": "One visible portal with real GET collection and field metadata."
+}

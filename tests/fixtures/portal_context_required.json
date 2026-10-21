@@ -1,0 +1,12 @@
+{
+  "scenario": "portal_context_required",
+  "topology": "single",
+  "errors": {
+    "1:/projects": {
+      "http_status": 400,
+      "api_code": 4012,
+      "message": "Portal ID is required",
+      "field": "PORTALID"
+    }
+  }
+}

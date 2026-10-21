@@ -1,0 +1,11 @@
+{
+  "scenario": "module_unavailable",
+  "topology": "single",
+  "errors": {
+    "1:/releases": {
+      "http_status": 400,
+      "api_code": 7001,
+      "message": "Not allowed as per current license"
+    }
+  }
+}

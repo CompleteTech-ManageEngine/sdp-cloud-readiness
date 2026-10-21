@@ -1,0 +1,5 @@
+{
+  "scenario": "asset_catalog_gap",
+  "topology": "single",
+  "asset_catalog": "gap"
+}

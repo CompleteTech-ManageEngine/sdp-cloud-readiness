@@ -1,0 +1,5 @@
+{
+  "scenario": "mixed_permissions",
+  "topology": "multi",
+  "description": "HR Projects denied; Security portal inaccessible; other portal reads continue."
+}

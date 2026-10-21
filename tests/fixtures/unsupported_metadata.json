@@ -1,0 +1,32 @@
+{
+  "scenario": "unsupported_metadata",
+  "topology": "single",
+  "asset_catalog": "empty",
+  "errors": {
+    "1:/requests/metainfo": {
+      "http_status": 404,
+      "api_code": 4007,
+      "message": "Invalid URL"
+    },
+    "1:/changes/metainfo": {
+      "http_status": 404,
+      "api_code": 4007,
+      "message": "Invalid URL"
+    },
+    "1:/changes/401/metainfo": {
+      "http_status": 404,
+      "api_code": 4007,
+      "message": "Invalid URL"
+    },
+    "1:/asset_assets/_metainfo": {
+      "http_status": 404,
+      "api_code": 4007,
+      "message": "Invalid URL"
+    },
+    "1:/assets/metainfo": {
+      "http_status": 404,
+      "api_code": 4007,
+      "message": "Invalid URL"
+    }
+  }
+}

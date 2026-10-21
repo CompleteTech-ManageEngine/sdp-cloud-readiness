@@ -1,0 +1,5 @@
+{
+  "scenario": "interrupted",
+  "topology": "multi",
+  "interrupt_at_attempt": 8
+}
