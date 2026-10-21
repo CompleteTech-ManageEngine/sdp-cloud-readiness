@@ -15,7 +15,7 @@ Requests use `authtoken` and `Accept: application/vnd.manageengine.sdp.v3+json` 
 | `/users`, `/technicians` | Portal memberships/effective identity roles | Explicit originating `PORTALID` | [ESM identity API transition](https://pitstop.manageengine.com/portal/en/community/topic/user-technician-api-v3-changes-over-the-esm-release); do not sum memberships as unique people |
 | Remaining inventory/form operations below | Portal, plus module/template/type where required | Explicit originating `PORTALID` | Record and field IDs remain namespaced to their portal/module |
 
-**Discovery sourcing qualification:** a corresponding portal-list operation was not located in the reviewed public ManageEngine on-premises guide or official ServiceDeskPlus Postman collection. Netskope provides a primary integration contract, not a ManageEngine minimum-build guarantee. The scanner records this qualification and runtime endpoint outcome. If the installed build cannot expose discovery, only explicitly supplied known IDs can establish targets. No default ID, integer sweep, browser session, or undocumented topology fallback is used. Details are in [research-topology.md](research-topology.md).
+**Discovery sourcing qualification:** a corresponding portal-list operation was not located in the reviewed public ManageEngine on-premises guide or official ServiceDeskPlus Postman collection. Netskope provides a primary integration contract, not a ManageEngine minimum-build guarantee. The scanner records this qualification and runtime endpoint outcome. If the installed build cannot expose discovery, only explicitly supplied known IDs can establish targets. No default ID, integer sweep, browser session, or undocumented topology fallback is used. Details are in [research-topology.md](topology.md).
 
 A discovered portal's metadata may include name, type, lifecycle state, and edition. It does not prove access to all modules. `accessible` stays unknown until scoped response evidence establishes access or denial. State IDs are not interpreted using an invented numeric mapping, and edition labels do not serve as an enabled-module catalog.
 
@@ -72,7 +72,7 @@ The old unfiltered `/udf_fields` inventory has been removed. `field_definitions`
 | Documented Space modules | `/udf_fields` with the exact `space_campus`, `space_structure`, `space_floor` or `space_room` module selector | Only for that observed/applicable module; never generalized to unrelated modules |
 | Modules without a verified definition read | No invented metadata endpoint | Observe UDF API names in already-collected rows without storing their values as metadata; report inferred, incomplete schema evidence |
 
-The verified links, response structures, fallbacks and normalization rules are documented in [research-fields.md](research-fields.md). No official current generic definition endpoint was verified for Problems, Projects, Releases, Users, Technicians, Contracts or Purchases. CMDB uses observed CI-type metadata; it is not replaced by an invented universal `/cmdb/_metainfo` call. A missing strategy or type identifier does not imply zero fields.
+The verified links, response structures, fallbacks and normalization rules are documented in [research-fields.md](fields.md). No official current generic definition endpoint was verified for Problems, Projects, Releases, Users, Technicians, Contracts or Purchases. CMDB uses observed CI-type metadata; it is not replaced by an invented universal `/cmdb/_metainfo` call. A missing strategy or type identifier does not imply zero fields.
 
 A successful definition read retains field/module/portal provenance, constraints and counts. `form_scope_complete` and `registry_complete` are distinct. Completing inspected forms/types cannot certify fields not attached to those layouts. The field limit/default count is a bounded inspection policy; zero selects all observed metadata targets, still within global budgets.
 
@@ -121,4 +121,4 @@ Use the installed product's API documentation to resolve build differences. Clou
 `get_total_count` is now controlled by `--count-policy first|always|never`.
 The default is first-page only; every-page mode preserves earlier behavior. No endpoint
 or response-wrapper allowlist is expanded by this patch. See
-[the current source/contract review](diagnostic-context-2.1.1.md).
+[the current source/contract review](../releases/2.1.1.md).

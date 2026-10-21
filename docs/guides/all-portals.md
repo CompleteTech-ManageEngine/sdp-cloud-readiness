@@ -16,7 +16,7 @@ The existing directory contract is published by Netskope for its on-premises int
 
 - **D**: read a separate credential through the existing masked/hidden input component. Only `/portals` without `PORTALID` can use it. The transport rejects any attempt to apply it to a module, detail or metadata operation. A failed directory credential does not mark the original integration credential invalid. Both keys' raw and URL-encoded forms enter the in-memory redactor. As with other Python secrets, this is not a guarantee of secure memory erasure; keys are never written to disk.
 - **L**: enter all verified IDs together. Same-host portal links are accepted only for local ID extraction with a single `PORTALID` query field. Different origins, userinfo, fragments, token-bearing query fields, numeric ranges, invalid IDs and arbitrary URLs are rejected without requests. Input is not repeated in error messages. This input is **not an API-key prompt**.
-- **F**: use a strict non-secret scope file. `portals.example.json` contains fictional values and is never used implicitly. Edit its host and every ID before use. Files are bounded to 1 MiB and admit only the documented schema; there is no import of raw server responses or browser captures.
+- **F**: use a strict non-secret scope file. `examples/config/portals.example.json` contains fictional values and is never used implicitly. Edit its host and every ID before use. Files are bounded to 1 MiB and admit only the documented schema; there is no import of raw server responses or browser captures.
 
 After a secondary credential is attempted, D is no longer offered; the menu becomes L/F/Enter. A blank answer with no known IDs explicitly finishes with diagnostic reports only.
 

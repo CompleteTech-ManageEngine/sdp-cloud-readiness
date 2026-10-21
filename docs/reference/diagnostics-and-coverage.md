@@ -118,7 +118,7 @@ Configured types/lengths are taken from definitions when exposed. Values observe
 
 A repeated field across templates is deduplicated within its portal/module namespace; its contexts are retained. Conflicting exposed constraints remain explicit variants. An observed definition allowing 1,000 characters against a relevant target limit of 250 indicates possible truncation exposure. It does not establish that any current value is over 250. This is an illustrative comparison; use the specific documented limit and module in the finding.
 
-See [field research](research-fields.md) for verified selectors and module-specific limits. A failed bare universal UDF call is no longer part of the architecture.
+See [field research](fields.md) for verified selectors and module-specific limits. A failed bare universal UDF call is no longer part of the architecture.
 
 ## Aggregation and confidence
 

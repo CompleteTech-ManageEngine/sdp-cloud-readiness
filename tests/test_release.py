@@ -91,16 +91,20 @@ class ReleaseTests(unittest.TestCase):
             required = {
                 "sdp_cloud_readiness.py", "sdp_cloud_readiness.pyz", "__main__.py",
                 "sdp_audit/cli.py", "sdp_audit/environment.py", "sdp_audit/fields.py", "sdp_audit/transport.py",
-                "Run-Assessment.cmd", "Run-All-Portals.cmd", "README.md", "connection.example.json", "answers.example.json",
-                "portals.example.json", "sdp_audit/portal_scope.py", "docs/all-portals-one-run.md", "tests/test_multiportal_run.py",
+                "Run-Assessment.cmd", "Run-All-Portals.cmd", "README.md", "examples/config/connection.example.json", "examples/config/answers.example.json",
+                "examples/config/portals.example.json", "sdp_audit/portal_scope.py", "docs/guides/all-portals.md", "tests/test_multiportal_run.py",
                 "tests/fixtures/recovery.json",
                 "sdp_audit/credentials.py", "sdp_audit/artifacts.py", "sdp_audit/diagnostics.py",
-                "docs/discovery-and-output-troubleshooting.md", "tests/test_startup_and_publication.py", "docs/windows-key-input.md", "tests/test_credentials.py", "tests/test_credentials_gui.py",
-                "docs/CHANGELOG.md", "docs/research-topology.md", "docs/research-fields.md",
+                "docs/guides/troubleshooting.md", "tests/test_startup_and_publication.py", "docs/guides/windows-key-input.md", "tests/test_credentials.py", "tests/test_credentials_gui.py",
+                "CHANGELOG.md", "docs/reference/topology.md", "docs/reference/fields.md",
                 "tests/test_fields.py", "tests/test_environment_safety.py", "tests/test_release.py",
                 "tests/fixtures/single.json", "tests/fixtures/multi.json", "tests/fixtures/udf_primary.json",
                 "tests/fixtures/udf_fallback.json", "tools/build_release.py",
                 "examples/synthetic-assessment/report.html", "SHA256SUMS.txt",
+                "CONTRIBUTING.md", "docs/README.md", "docs/guides/usage.md",
+                "docs/development/validation.md", "docs/development/release-verification.md",
+                "docs/reference/api-catalog.md", "docs/reference/diagnostics-and-coverage.md",
+                "docs/releases/2.1.1.md", "docs/releases/2.1.2.md", "examples/config/README.md",
             }
             self.assertTrue({prefix + name for name in required}.issubset(names))
             self.assertTrue(all(name.startswith(prefix) and ".." not in Path(name).parts for name in names))

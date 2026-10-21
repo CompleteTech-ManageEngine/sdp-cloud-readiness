@@ -12,7 +12,7 @@ server through two actual hidden-console prompts in a POSIX terminal. Both-denie
 and secondary-success/paginated-directory scenarios used the global 30/minute
 limiter and made zero module reads. Single/multi/recovery demos, local output
 self-test, help/version, archive integrity and checksums passed. See
-[the current release verification](RELEASE-VERIFICATION.md).
+[the current release verification](release-verification.md).
 
 No live customer system, real credential, native Windows desktop or separate
 Python 3.10 runtime was used. This patch fixes client control-flow/menu defects;
@@ -23,7 +23,7 @@ it does not claim that the live build-15240 directory permission denial is fixed
 Runtime: Python 3.13.5 on Linux; Tcl/Tk with Xvfb for graphical tests.
 Baseline 2.1.0 ran 426 tests successfully (five GUI tests skipped on that baseline run).
 The updated source suite passed 455 tests with all five GUI tests enabled, including 29 new
-context/contract/count-policy regressions. See the shipped [release verification](RELEASE-VERIFICATION.md) for
+context/contract/count-policy regressions. See the shipped [release verification](release-verification.md) for
 final extracted-package and independent portable-runner results.
 
 The new failure-pattern tests use synthetic objects and an injected transport/clock:
@@ -166,7 +166,7 @@ The default `--demo` scenario is multi-portal. All demonstration outputs must be
 | Reports | Six formats render for synthetic multi-portal evidence; null/blank unknown counts are distinct from zero; gaps and vendor questions retain portal/module context; no raw sensitive source content |
 | Compatibility and release | Python 3.10+ syntax/runtime target; ordinary invocation/help/selection; Windows launcher retained; isolated portable `.pyz` run; example configuration accepted; ZIP and checksum verification |
 
-The implementation-focused tests include `test_topology.py`, `test_transport.py`, `test_collect.py`, `test_environment.py`, `test_fields.py`, `test_analyze.py`, `test_report.py`, `test_progress.py`, `test_cli.py`, `test_synthetic.py`, and integration coverage. Reusable scenario configurations and their purpose are documented in [the fixture guide](../tests/fixtures/README.md). Final suite totals and packaging validation are recorded only from the completed release run, not estimated from this matrix.
+The implementation-focused tests include `test_topology.py`, `test_transport.py`, `test_collect.py`, `test_environment.py`, `test_fields.py`, `test_analyze.py`, `test_report.py`, `test_progress.py`, `test_cli.py`, `test_synthetic.py`, and integration coverage. Reusable scenario configurations and their purpose are documented in [the fixture guide](../../tests/fixtures/README.md). Final suite totals and packaging validation are recorded only from the completed release run, not estimated from this matrix.
 
 ### Portable artifact check
 

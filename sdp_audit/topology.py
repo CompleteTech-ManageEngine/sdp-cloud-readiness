@@ -3,7 +3,7 @@
 The /portals on-premises contract is documented by the maintainer of Netskope's
 SDP integration. It was not found in the reviewed native ManageEngine guide or
 Postman collection; this is not a promise of availability on every SDP build.
-See docs/research-topology.md. No identifiers or alternative paths are guessed.
+See docs/reference/topology.md. No identifiers or alternative paths are guessed.
 """
 
 from __future__ import annotations

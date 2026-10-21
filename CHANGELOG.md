@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Replace the long root README with a quick start and move the full guide to `docs/guides/usage.md`.
+- Group documentation into guides, reference, development evidence, and release notes; add a documentation index and contributor guide.
+- Move non-secret configuration templates into `examples/config/`.
+- Keep generated portable binaries and checksum manifests in ignored `dist/`; preserve the root source entry points and Windows launchers.
+- Update the explicit release manifest and packaging checks for the new documentation and example paths.
+
 ## 2.1.2 — October 14, 2026
 
 - Fix `--diagnose` silently ignoring `--directory-key` and `--directory-key-env`. Honor the explicitly requested secondary directory attempt while preserving directory-only GETs, one global scheduler, stop handling and no module/list/cache work.

@@ -163,5 +163,5 @@ The combination `--diagnose --directory-key` now honors the requested second
 credential while querying only the directory. Version 2.1.1 incorrectly skipped
 that option. The ordinary assessment path already performed it. After the one
 secondary attempt, D is removed from the recovery menu. See
-[detailed boundaries](directory-diagnostic-recovery-2.1.2.md). A completed two-denial
+[detailed boundaries](../releases/2.1.2.md). A completed two-denial
 ordinary run does not need to be repeated to establish the same result.
