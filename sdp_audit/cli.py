@@ -15,8 +15,9 @@ from typing import Any
 from . import __version__
 from .catalog import ALLOWED_PATTERNS, GLOBAL_RESOURCES, RESOURCES, UNEXPOSED_FEATURES
 from .collect import CollectionOptions
-from .credentials import acquire_api_key
+from .credentials import acquire_api_key, prepare_api_key
 from .credential_setup import CredentialSetup
+from .local_env import local_environment, slot_assignments
 from .environment import EnvironmentCollector, EnvironmentOptions
 from .environment_analysis import analyze_environment
 from .portal_scope import PortalScopeResolver, ScopeOptions
@@ -100,6 +101,9 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--check-output", action="store_true", help="Create and verify a synthetic local report set and ZIP, then exit; no credentials, host or HTTP calls. Use to diagnose missing reports.")
     parser.add_argument("--diagnose", action="store_true", help="Directory GETs only; no module inventory or saved-list recovery. Honors --directory-key/--directory-key-env for one requested secondary-credential attempt when initial discovery is incomplete.")
     parser.add_argument("--config", help="Optional non-secret connection settings JSON")
+    env_group = parser.add_mutually_exclusive_group()
+    env_group.add_argument("--env-file", help="Local UTF-8 environment file; relative paths use the working directory. Default: .env beside the source entry point or portable app.")
+    env_group.add_argument("--no-env", action="store_true", help="Do not load or create a local environment file; existing process environment still applies.")
     parser.add_argument("--answers", help="Optional business/target answers JSON; unknown answers stay explicit")
     parser.add_argument("--source-build", type=int, help="Optional known source build; recorded as user-supplied")
     parser.add_argument("--target-edition", choices=("Standard", "Professional", "Enterprise"))
@@ -298,6 +302,18 @@ def _check_output(output: Path) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _cli_parser()
     args = parser.parse_args(argv)
+    offline = args.list_endpoints or args.demo or args.check_output
+    try:
+        with local_environment(args.env_file, disabled=args.no_env or offline,
+                               create=not args.check_key_input) as file_host:
+            return _run(args, file_host=file_host)
+    except (ValueError, OSError):
+        # Paths and decoding errors may themselves contain secret input.
+        print("Local environment setup failed. Check file access, UTF-8 syntax, duplicate names and the SDP_HOST credential binding. No values were printed.", file=sys.stderr)
+        return 1
+
+
+def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
     if args.list_endpoints:
         print("Only these documented GET collection paths and their explicit allowlisted detail/metadata paths are callable:")
         print("  portals                GET /api/v3/portals [global discovery; no PORTALID]")
@@ -358,13 +374,31 @@ def main(argv: list[str] | None = None) -> int:
                 host = input("ServiceDesk Plus on-premises URL (https://host:port): ").strip()
             if not host:
                 raise ValueError("A source host is required.")
+            slots = slot_assignments(host, allow_http=args.allow_http, file_host=file_host)
             multi_key = settings.pop("multi_key", False)
             if not isinstance(multi_key, bool):
                 raise ValueError("multi_key must be a boolean.")
             credential_file = settings.pop("credential_file", None)
             global_key_env = settings.pop("global_key_env", None)
             global_portal_id = settings.pop("global_portal_id", None)
-            multi_key = multi_key or credential_file is not None
+            env_global_key = os.environ.get("SDP_GLOBAL_API_KEY")
+            env_global_portal = os.environ.get("SDP_GLOBAL_PORTAL_ID")
+            if env_global_key or env_global_portal:
+                if global_key_env or global_portal_id:
+                    raise ValueError("Global credentials are assigned by both numbered environment setup and explicit settings.")
+                global_key_env = "SDP_GLOBAL_API_KEY" if env_global_key else None
+                global_portal_id = env_global_portal
+            if os.environ.get("SDP_DIRECTORY_API_KEY"):
+                if args.directory_key_env and args.directory_key_env != "SDP_DIRECTORY_API_KEY":
+                    raise ValueError("Directory credentials are assigned by both local environment setup and explicit settings.")
+                args.directory_key_env = "SDP_DIRECTORY_API_KEY"
+            multi_key = multi_key or credential_file is not None or bool(slots) or bool(env_global_key)
+            if slots:
+                if args.key_input != "auto":
+                    raise ValueError("Numbered instance slots require automatic key input. Clear the slots to use explicit secure prompts.")
+                if not args.diagnose and not settings["portal_ids"] and not settings.get("portal_file"):
+                    settings["portal_ids"] = [entry["id"] for entry in slots]
+                    settings["portal_discovery_mode"] = "automatic" if args.all_portals else "explicit"
             if (global_key_env or global_portal_id) and not multi_key:
                 raise ValueError("Explicit global credentials require multi-key mode.")
             if args.non_interactive and (args.key_input != "auto" or
@@ -382,9 +416,13 @@ def main(argv: list[str] | None = None) -> int:
                 portal_id=None, ca_file=settings.get("ca_file"),
                 allow_http=args.allow_http, insecure_tls=args.insecure_tls, progress=progress, multi_key=multi_key,
             )
+            # Also redact an optional directory credential before it is needed
+            # for recovery, so local paths and earlier responses cannot leak it.
+            if args.directory_key_env and os.environ.get(args.directory_key_env):
+                client.register_credential(prepare_api_key(os.environ[args.directory_key_env]).value)
             credential_setup = (CredentialSetup(client, path=credential_file, global_env=global_key_env,
                                 global_portal=global_portal_id, non_interactive=args.non_interactive,
-                                mode=args.key_input) if multi_key else None)
+                                mode=args.key_input, slot_entries=slots) if multi_key else None)
             if client.sanitize_local_text(str(output)) != str(output):
                 del key
                 raise ValueError("The API key must not appear in the output path.")

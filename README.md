@@ -20,6 +20,8 @@ Provide your ServiceDesk Plus URL and API key through the prompts. Keys are neve
 
 By default the scanner uses one collection key across selected portals. Use `--multi-key` for secure per-instance prompts, or `--credential-file` for explicit environment-reference assignments. An optional global credential is separate from directory discovery and instance collection. Missing access remains an explicit coverage gap. See [multiple credentials](docs/guides/multiple-credentials.md) for setup and limitations.
 
+For repeated runs, fill the local `.env` beside the source entry point or portable `.pyz`. A first normal run creates a blank scaffold without replacing an existing file; [.env.example](.env.example) supplies 20 numbered key/portal-ID pairs. Set `SDP_HOST`, the actual portal IDs, and keys locally. Populated slots enable per-instance routing; slot numbers never imply portal IDs. Process variables take precedence. Use `--env-file <path>` or `--no-env` to override loading. See [local environment setup](docs/guides/local-env.md) for syntax, scope and conflict rules.
+
 Run an offline demonstration without credentials or network access:
 
 ```powershell

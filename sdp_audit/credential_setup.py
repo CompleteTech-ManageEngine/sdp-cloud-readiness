@@ -74,12 +74,19 @@ class CredentialSetup:
 
     def __init__(self, client: Any, *, path: str | None = None,
                  global_env: str | None = None, global_portal: str | None = None,
-                 non_interactive: bool = False, mode: str = "auto"):
+                 non_interactive: bool = False, mode: str = "auto",
+                 slot_entries: list[dict[str, str]] | None = None):
         self.client = client
         self.interactive = not non_interactive and sys.stdin.isatty()
         self.mode = mode
         self._keys: dict[str, str] = {}
         data = read_assignments(path, client.base_url, allow_http=client._allow_http) if path else {}
+        entries = list(data.get("portals", []))
+        configured_ids = {entry["id"] for entry in entries}
+        self._slot_ids = {entry["id"] for entry in slot_entries or []}
+        if configured_ids & self._slot_ids:
+            raise ValueError("Portal credential is assigned by both numbered slots and the credential file.")
+        entries.extend(slot_entries or [])
         global_entry = data.get("global")
         if bool(global_env) != bool(global_portal):
             raise ValueError("Global key reference and portal context must be supplied together.")
@@ -89,7 +96,6 @@ class CredentialSetup:
             global_entry = {"env": _env(global_env), "portal_id": _portal(global_portal)}
         # Validate all references first, then register every available secret
         # before any network response, interactive scope entry or local output.
-        entries = data.get("portals", [])
         references = {entry["env"] for entry in entries}
         if global_entry:
             references.add(global_entry["env"])
@@ -117,7 +123,7 @@ class CredentialSetup:
             return
         for portal in topology.portals:
             pid = portal.id
-            if not portal.selected or pid in self._keys:
+            if not portal.selected or pid in self._keys or pid in self._slot_ids:
                 continue
             # IDs come from the validated topology, but still pass the redactor.
             label = self.client.sanitize_local_text(pid)

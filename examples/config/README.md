@@ -2,6 +2,8 @@
 
 These files contain fictional values and no working credentials. Copy only the templates you need to your working directory and edit the copies.
 
+For keys, use the root [`.env.example`](../../.env.example) or the blank `.env` created on the first normal run. It contains 20 numbered key/portal-ID pairs and separate directory/global slots. Fill real keys only in your local `.env`, never in these JSON examples. See [local environment setup](../../docs/guides/local-env.md).
+
 | Template | Purpose | CLI option |
 | --- | --- | --- |
 | [connection.example.json](connection.example.json) | Source URL, request budgets, and collection settings | `--config connection.json` |

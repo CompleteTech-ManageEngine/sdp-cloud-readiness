@@ -48,6 +48,10 @@ class ReleaseTests(unittest.TestCase):
         private.mkdir(parents=True)
         (private / "assessment.json").write_text(json.dumps({"secret": cls.private_marker}), encoding="utf-8")
         (cls.stage / ".env").write_text("SDP_API_KEY=" + cls.private_marker, encoding="utf-8")
+        for folder in (cls.stage, cls.stage / "examples/synthetic-assessment", cls.stage / "examples/recovery-assessment"):
+            (folder / ".env.customer").write_text("SDP_API_KEY=" + cls.private_marker, encoding="utf-8")
+        (cls.stage / "examples/synthetic-assessment/.env").write_text(cls.private_marker, encoding="utf-8")
+        (cls.stage / "examples/synthetic-assessment/credentials.env").write_text(cls.private_marker, encoding="utf-8")
         cache = cls.stage / "sdp_audit/__pycache__"
         cache.mkdir(exist_ok=True)
         (cache / "private.pyc").write_bytes(cls.private_marker.encode("ascii"))
@@ -108,6 +112,7 @@ class ReleaseTests(unittest.TestCase):
                 "sdp_audit/credential_setup.py", "examples/config/credentials.example.json",
                 "docs/guides/multiple-credentials.md", "docs/reference/multi-key-authorization.md",
                 "docs/releases/2.2.0.md", "tests/test_multi_credentials.py",
+                ".env.example", "sdp_audit/local_env.py", "tests/test_local_env.py",
             }
             self.assertTrue({prefix + name for name in required}.issubset(names))
             self.assertTrue(all(name.startswith(prefix) and ".." not in Path(name).parts for name in names))
@@ -157,9 +162,21 @@ class ReleaseTests(unittest.TestCase):
                 for member in archive.infolist():
                     self.assertNotIn("sdp-assessments/", member.filename)
                     self.assertNotIn("__pycache__/", member.filename)
-                    self.assertFalse(member.filename.endswith(".env"))
+                    self.assertFalse(member.filename.lower().endswith(".env"))
+                    self.assertFalse(Path(member.filename).name.startswith(".env.") and not member.filename.endswith("/.env.example"))
                     self.assertNotIn(self.private_marker.encode("ascii"), archive.read(member))
                     self.assertEqual(member.date_time, STAMP)
+
+    def test_filled_environment_example_cannot_be_packaged(self):
+        target = self.stage / ".env.example"
+        original = target.read_bytes()
+        try:
+            target.write_text("SDP_API_KEY=" + self.private_marker, encoding="utf-8")
+            with self.assertRaises(ValueError) as caught:
+                build(self.stage, self.work / "reject-filled-example")
+            self.assertNotIn(self.private_marker, str(caught.exception))
+        finally:
+            target.write_bytes(original)
 
     def test_zipapp_is_self_contained_and_has_only_runtime_python_members(self):
         with zipfile.ZipFile(self.portable) as archive:
