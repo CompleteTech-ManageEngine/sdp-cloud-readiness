@@ -70,3 +70,7 @@ The build writes the portable app, source ZIP, Windows launchers, example HTML, 
 ## Data handling
 
 Collection is restricted to reviewed HTTP GET operations. Raw ticket descriptions, notes, attachment bodies, credentials, and unnecessary personal fields are excluded from reports. Reports still contain internal structure, identifiers, counts, and configuration findings; review them before sharing. An assessment is not migration approval or proof of complete source visibility.
+
+## License
+
+Code and documentation are released under the [MIT License](LICENSE).
