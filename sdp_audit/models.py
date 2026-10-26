@@ -50,6 +50,8 @@ class Dataset:
     read_attempted: bool = False
     last_response: dict[str, Any] = field(default_factory=dict)
     total_count_page: int | None = None
+    sample_complete: bool | None = None
+    sampled_parents: int | None = None
 
     def coverage(self) -> dict[str, Any]:
         observed = len(self.records) if self.records or self.pages or self.list_complete else None
@@ -75,6 +77,7 @@ class Dataset:
                 "outcome": self.outcome or self.status.upper(),
                 "records_observed": observed, "pages_observed": self.pages,
                 "list_complete": self.list_complete, "detail_complete": self.detail_complete,
+                "sample_complete": self.sample_complete, "sampled_parents": self.sampled_parents,
                 "detail_records_attempted": self.detail_attempted,
                 "detail_records_successful": self.detail_succeeded,
                 "diagnostics": list(self.diagnostics), "stop_reason": self.stop_reason,

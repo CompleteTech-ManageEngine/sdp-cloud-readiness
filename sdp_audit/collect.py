@@ -238,12 +238,22 @@ class Collector:
 
         dataset.last_response = dict(getattr(self.client, "last_response", {}) or {})
 
-        rows = response.get(spec.plural)
+        # The current /asset_modules contract uses asset_modules; retain the
+        # earlier all_product_types wrapper only for this reviewed endpoint.
+        wrapper = spec.plural
+        if spec.key == "asset_modules" and spec.path == "/asset_modules" and "asset_modules" in response:
+            wrapper = "asset_modules"
+            if spec.plural in response and response[spec.plural] != response[wrapper]:
+                self._contract_diagnostic(dataset, spec, response, "CONFLICTING_COLLECTION_WRAPPERS")
+                dataset.status, dataset.outcome = "invalid_response", "PARSE_ERROR"
+                dataset.stop_reason = dataset.outcome
+                return False
+        rows = response.get(wrapper)
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             dataset.status = "partial" if dataset.records else "invalid_response"
             dataset.outcome = "PARSE_ERROR"
             dataset.stop_reason = dataset.outcome
-            reason = ("MISSING_COLLECTION_WRAPPER" if spec.plural not in response else
+            reason = ("MISSING_COLLECTION_WRAPPER" if wrapper not in response else
                       "INVALID_COLLECTION_TYPE" if not isinstance(rows, list) else "NON_OBJECT_COLLECTION_ITEM")
             self._contract_diagnostic(dataset, spec, response, reason)
             dataset.issues.append("Expected documented collection key was missing or malformed: " + spec.plural)
@@ -417,6 +427,7 @@ class Collector:
             combined.outcome = "COLLECTING"
             snapshot.datasets[key] = combined
             all_complete = parents.list_complete and len(chosen) == len(parents.records)
+            sampled_complete = True
             visited = 0
             for parent_index, parent in enumerate(chosen):
                 parent_id = _collect_id(parent)
@@ -430,7 +441,7 @@ class Collector:
                 finalized = False
 
                 def finish_parent() -> None:
-                    nonlocal visited, all_complete, copied_count, copied_pages, finalized
+                    nonlocal visited, all_complete, sampled_complete, copied_count, copied_pages, finalized
                     if finalized:
                         return
                     for row in child.records[copied_count:]:
@@ -450,13 +461,17 @@ class Collector:
                     else:
                         combined.issues.append("A sampled parent's child collection is incomplete.")
                     all_complete = all_complete and child.list_complete
+                    sampled_complete = sampled_complete and child.list_complete
                     finalized = True
 
                 def finish_collection() -> None:
+                    combined.sample_complete = sampled_complete and visited == len(chosen)
+                    combined.sampled_parents = len(chosen)
                     combined.list_complete = all_complete
                     combined.detail_complete = all_complete
                     combined.status = "complete" if all_complete else "partial"
-                    combined.outcome = ("EMPTY" if not combined.records else "COMPLETE") if all_complete else "INCOMPLETE"
+                    combined.outcome = (("EMPTY" if not combined.records else "COMPLETE") if all_complete
+                                        else "SAMPLE_COMPLETE" if combined.sample_complete else "INCOMPLETE")
                     if not combined.records and not combined.pages and child.outcome not in {None, "COLLECTING", "COMPLETE", "EMPTY"}:
                         combined.outcome = child.outcome
                         combined.status = child.status

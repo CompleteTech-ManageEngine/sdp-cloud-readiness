@@ -501,10 +501,13 @@ def _environment_coverage_rows(data: Mapping[str, Any]) -> list[tuple[Any, ...]]
                        f'{item.get("detail_records_attempted", 0)} attempted; '
                        + ("complete for listed scope" if details is True else
                           "incomplete or sampled" if details is False else "completeness unknown"))
+        if item.get("sample_complete"):
+            detail_text = str(item.get("detail_records_successful", 0)) + " / " + str(item.get("sampled_parents")) + " sampled parents complete; unsampled parents unknown"
+        reason = " ".join(str(v) for v in (item.get("reason"), item.get("next_step")) if v)
         rows.append((_scope_label(item), item.get("resource", item.get("key")),
                      item.get("records_observed"), "Complete" if complete else "Incomplete / not established",
                      detail_text, item.get("outcome", item.get("status")),
-                     item.get("http_status"), item.get("api_codes"), item.get("reason"), item.get("confidence")))
+                     item.get("http_status"), item.get("api_codes"), reason, item.get("confidence")))
     return rows
 
 

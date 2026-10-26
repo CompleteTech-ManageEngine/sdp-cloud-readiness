@@ -349,22 +349,39 @@ def print_environment_coverage(env: EnvironmentSnapshot) -> None:
         print("  Portal directory coverage is incomplete; additional accessible portals may exist.")
     for item in env.portals.values():
         header = _scope({"portal_id": item.portal.id, "portal_name": item.portal.name}).removesuffix(" / ")
-        datasets = list(item.snapshot.datasets.values())
-        complete = sum(ds.list_complete for ds in datasets)
-        print(f"  {header}: {complete}/{len(datasets)} lists complete; {item.portal.scan_status}.")
-        for ds in datasets:
-            if ds.list_complete:
+        rows = (env.retained_portals[item.portal.id]["coverage"] if item.portal.id in env.retained_portals
+                else [ds.coverage() for ds in item.snapshot.datasets.values()])
+        complete = sum(bool(row.get("list_complete")) for row in rows)
+        print(f"  {header}: {complete}/{len(rows)} lists complete; {item.portal.scan_status}.")
+        for row in rows:
+            if row.get("list_complete"):
                 continue
-            observed = ds.coverage().get("records_observed")
+            observed = row.get("records_observed")
             amount = f"{observed} records observed" if observed is not None else "count unknown"
-            state = ds.outcome or "NOT_STARTED"
-            reason = ds.stop_reason if ds.stop_reason else state
-            print(f"    {_key(ds.key)}: {amount}; {state}; reason: {reason}.")
+            state = row.get("outcome") or "NOT_STARTED"
+            reason = row.get("stop_reason") or state
+            sample = (f"; {row.get('detail_records_successful', 0)}/{row.get('sampled_parents', '?')} sampled parents complete; unsampled parents unknown"
+                      if row.get("sample_complete") else "")
+            transport = row.get("last_response", {}).get("transport_detail")
+            detail = "; " + transport if transport in {"CONNECTION_TIMED_OUT", "CONNECTION_RESET", "CONNECTION_REFUSED", "HTTP_RESPONSE_INCOMPLETE", "HTTP_RESPONSE_MALFORMED"} else ""
+            print(f"    {_key(row.get('key', row.get('resource')))}: {amount}; {state}; reason: {reason}{sample}{detail}.")
+    outcomes = {ds.outcome for item in env.portals.values() for ds in item.snapshot.datasets.values()}
+    outcomes.update(row.get("outcome") for entry in env.retained_portals.values() for row in entry["coverage"])
+    if "RECORD_LIMIT_REACHED" in outcomes:
+        print("  Row cap reached: --full-inventory or --max-records changes collection limits, not HTTP budgets. On resume, changing limits requires --restart-all to recollect all instances.")
+    if "NETWORK_ERROR" in outcomes or "SERVER_ERROR" in outcomes:
+        print("  Failed reads: inspect sanitized transport/HTTP diagnostics; --resume with --retry-failed re-collects affected instances under existing limits.")
+    if "PERMISSION_DENIED" in outcomes:
+        print("  Permission gaps: verify the key's intended instance and operation-specific read access with an administrator; a generic 403 does not identify a required role. Use --retry-portals after authorized changes.")
     if env.global_snapshot:
         ds = env.global_snapshot.datasets.get("orgusers")
         if ds:
             amount = ds.coverage().get("records_observed")
             print(f"  Organisation directory (collected once): {amount if amount is not None else 'unknown'} users observed; {ds.outcome}.")
+    if env.source.get("orgusers_collection") == "credential_missing":
+        print("  Orguser access is optional and unconfigured: it needs an explicit ESM Org credential and verified global context. More budget does not grant this access; adding a new global context requires a new assessment.")
+    if not env.topology.complete or env.topology.mode in {"explicit", "assisted"}:
+        print("  Optional directory access was not established for the whole environment; successful selected-instance reads remain valid evidence.")
     if env.stop_classification:
         print("  Environment scan stopped: " + env.stop_classification + ".")
     print(f"  Global HTTP attempts: {env.stats.get('requests', 0)}/{env.settings.get('max_requests', 500)}; one shared rate limiter.")

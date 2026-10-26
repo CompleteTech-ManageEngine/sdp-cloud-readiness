@@ -15,7 +15,7 @@ from sdp_audit.environment import EnvironmentOptions
 from sdp_audit.environment_analysis import analyze_environment
 from sdp_audit.diagnostics import diagnostics_document
 from sdp_audit.models import EnvironmentSnapshot, ResourceSpec
-from sdp_audit.resume import ResumableAssessment, checkpoint_lock, read_checkpoint
+from sdp_audit.resume import ResumableAssessment, checkpoint_lock, read_checkpoint, retry_candidates
 from sdp_audit.synthetic import (create_synthetic_client, SYNTHETIC_HOST, PRIVATE_DESCRIPTION,
     PRIVATE_SUBJECT, PRIVATE_EMAIL, PRIVATE_FILENAME, PRIVATE_DEFAULT, PRIVATE_SCRIPT, PRIVATE_OPTION)
 
@@ -34,7 +34,7 @@ class ResumeTests(unittest.TestCase):
         self.counter = 0
 
     def run_scan(self, *, budget=3, resume=None, options=None, host=None, scenario=None,
-                 multi_key=False, keys=None, env_options=None, runtime=1200, discover=False):
+                 multi_key=False, keys=None, env_options=None, runtime=1200, discover=False, retry_failed=False, retry_portals=None, restart_all=False):
         self.counter += 1
         output = self.root / str(self.counter)
         output.mkdir()
@@ -51,7 +51,8 @@ class ResumeTests(unittest.TestCase):
             {'max_requests': budget, 'collections_selected': ['requests'], 'portal_ids': ['1', '2'],
              'portal_discovery_mode': 'explicit'})
         runner = ResumableAssessment(client, [RESOURCE], options or self.options,
-            env_options or self.env_options, None, None, output, resume=resume)
+            env_options or self.env_options, None, None, output, resume=resume,
+            retry_failed=retry_failed, retry_portals=retry_portals, restart_all=restart_all)
         with contextlib.redirect_stdout(io.StringIO()):
             runner.collect(env, None if discover else ['1', '2'])
         return env, server, output / 'checkpoint.json'
@@ -200,6 +201,60 @@ class ResumeTests(unittest.TestCase):
         self.assertEqual(len(analyze_environment(env).global_resources['coverage']), 1)
         for key in ('instance-key-1', 'global-only-key', 'rotated-global'):
             self.assertNotIn(key, (second / 'checkpoint.json').read_text())
+
+    def test_retry_selection_ignores_successfully_recovered_history(self):
+        entries = {'7': {'coverage': [{'outcome': 'COMPLETE'}],
+                         'fields': [{'status': 'COMPLETE'}],
+                         'diagnostics': [{'classification': 'PARSE_ERROR'}]},
+                   '42': {'coverage': [], 'fields': [{'status': 'PARSE_ERROR'}]}}
+        self.assertEqual(retry_candidates(entries), {'42'})
+
+    def test_retry_failed_recollects_only_transient_failure(self):
+        scenario = {'topology': 'multi', 'errors': {'1:/requests': {
+            'http_status': 500, 'api_code': 4004, 'message': 'Internal error'}}}
+        _, _, checkpoint = self.run_scan(budget=30, scenario=scenario)
+        old = read_checkpoint(checkpoint)
+        env, server, latest = self.run_scan(budget=30, resume=checkpoint, retry_failed=True)
+        self.assertTrue(server.calls)
+        self.assertTrue(all(call['portal_id'] == '1' for call in server.calls))
+        self.assertTrue(next(r for r in analyze_environment(env).coverage if r['portal_id'] == '1')['list_complete'])
+        self.assertEqual(read_checkpoint(latest)['portals']['2']['findings'], old['portals']['2']['findings'])
+        self.assertIn('SERVER_ERROR', env.resume_history[-1]['prior_outcomes']['1'])
+
+    def test_selective_retry_does_not_automatically_retry_permission_denial(self):
+        scenario = {'topology': 'multi', 'inaccessible_portals': ['1']}
+        _, _, checkpoint = self.run_scan(budget=30, scenario=scenario)
+        _, server, _ = self.run_scan(budget=30, resume=checkpoint, retry_failed=True, scenario=scenario)
+        self.assertFalse(server.calls)
+        env, server, _ = self.run_scan(budget=30, resume=checkpoint, retry_portals='1')
+        self.assertTrue(server.calls)
+        self.assertTrue(all(call['portal_id'] == '1' for call in server.calls))
+        self.assertTrue(next(r for r in analyze_environment(env).coverage if r['portal_id'] == '1')['list_complete'])
+
+    def test_interrupted_retry_preserves_prior_commit_and_pending_selection(self):
+        _, _, checkpoint = self.run_scan(budget=30)
+        old = read_checkpoint(checkpoint)
+        _, _, stopped = self.run_scan(budget=1, resume=checkpoint, retry_portals='1')
+        data = read_checkpoint(stopped)
+        self.assertEqual(data['pending_retries'], ['1'])
+        self.assertEqual(data['portals']['1']['findings'], old['portals']['1']['findings'])
+        _, server, latest = self.run_scan(budget=30, resume=stopped)
+        self.assertTrue(all(call['portal_id'] == '1' for call in server.calls))
+        self.assertFalse(read_checkpoint(latest)['pending_retries'])
+
+    def test_restart_all_allows_limit_change_but_not_host_or_scope_change(self):
+        capped = replace(self.options, max_records=2)
+        _, _, checkpoint = self.run_scan(budget=30, options=capped)
+        with self.assertRaisesRegex(ValueError, 'differ'):
+            self.run_scan(budget=30, resume=checkpoint, options=self.options)
+        _, server, latest = self.run_scan(budget=30, resume=checkpoint, options=self.options, restart_all=True)
+        self.assertEqual({c['portal_id'] for c in server.calls}, {'1', '2'})
+        self.assertTrue(all(r['list_complete'] for e in read_checkpoint(latest)['portals'].values() for r in e['coverage']))
+        with self.assertRaisesRegex(ValueError, 'differ'):
+            self.run_scan(budget=30, resume=checkpoint, restart_all=True, host='https://other.example.org')
+        with self.assertRaisesRegex(ValueError, 'checkpoint scope'):
+            self.run_scan(budget=30, resume=checkpoint, options=capped, retry_portals='999')
+        self.assertFalse(self.last_server.calls)
 
     def test_cli_rejects_diagnostic_checkpoint_and_resumes_slots(self):
         with patch.dict(os.environ, {}, clear=True), contextlib.redirect_stdout(io.StringIO()), \

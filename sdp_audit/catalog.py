@@ -148,8 +148,8 @@ _MODULES = {
 RESOURCES = [replace(spec, module=_MODULES.get(spec.key, spec.key)) for spec in RESOURCES]
 
 
-# Only attempted if the corresponding modern list GET returns HTTP 404. These
-# are compatibility reads for an older source build, not a route around an
+# Only attempted after an unsupported primary/fallback list response. These
+# are explicitly documented compatibility reads, not a route around an
 # authorization failure. The vendor documents retirement of these APIs.
 FALLBACKS: dict[str, list[ResourceSpec]] = {
     "assets": [
@@ -160,6 +160,11 @@ FALLBACKS: dict[str, list[ResourceSpec]] = {
         ),
     ],
     "computers": [
+        ResourceSpec(
+            "computers", "/asset_workstations", "asset_workstations", "asset_workstation",
+            ASSET_CHANGES, detail=False,
+            description="Documented build 15100+ workstation list. Separate from all-computer inventory; detail coverage is not implied.",
+        ),
         ResourceSpec(
             "computers", "/workstations", "workstations", "workstation",
             ASSET_CHANGES,
@@ -203,6 +208,8 @@ ALLOWED_PATTERNS: list[str] = [
     r"/requests/metainfo",
     r"/asset_assets/_metainfo",
     r"/asset_computers/_metainfo",
+    r"/asset_workstations",
+    r"/asset_workstations/_metainfo",
     r"/asset_printers/_metainfo",
     r"/asset_servers/_metainfo",
     r"/assets/metainfo",
