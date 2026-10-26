@@ -210,6 +210,7 @@ class LocalEnvTests(unittest.TestCase):
                                         "--modules", "requests,orgusers", "--output-dir", str(self.root / "reports")])
         self.assertEqual(code, 0, output)
         self.assertEqual(set(received), {("1", KEY1), ("2", KEY2)})
+        self.assertIn("Discovery skipped: no discovery key set; scope comes from numbered slots", output)
         report = next(self.root.glob("reports/*/assessment.json"))
         document = json.loads(report.read_text())
         self.assertEqual({p["portal_id"] for p in document["portals"]}, {"1", "2", "3"})
@@ -251,6 +252,7 @@ class LocalEnvTests(unittest.TestCase):
             code, output = self.run_cli(["--env-file", str(self.path), "--all-portals", "--non-interactive",
                 "--no-portal-cache", "--modules", "requests,orgusers", "--quiet", "--output-dir", str(self.root / "reports")])
         self.assertEqual(code, 0, output)
+        self.assertNotIn("Discovery skipped: no discovery key set", output)
         self.assertTrue(any("/portals" in url and pid is None and key == directory_key for url, pid, key in received))
         self.assertTrue(any("/orgusers" in url and pid == "1" and key == global_key for url, pid, key in received))
         self.assertTrue(any("/requests" in url and pid == "1" and key == KEY1 for url, pid, key in received))
@@ -271,6 +273,18 @@ class LocalEnvTests(unittest.TestCase):
         self.assertEqual(code, 0, output)
         self.assertTrue(server.calls)
         self.assertTrue(all(call["path"] == "/portals" for call in server.calls))
+
+    def test_diagnose_without_discovery_keys_does_not_borrow_slots(self):
+        self.write(self.values())
+        client, server, _ = create_synthetic_client(multi_key=True, api_key=None)
+        with patch("sdp_audit.cli.ReadOnlyClient", return_value=client):
+            code, output = self.run_cli(["--env-file", str(self.path), "--diagnose", "--non-interactive",
+                "--quiet", "--no-portal-cache", "--output-dir", str(self.root / "reports")])
+        self.assertEqual(code, 2, output)
+        self.assertIn("CREDENTIAL_MISSING", output)
+        self.assertFalse(server.calls)
+        self.assertNotIn("Discovery skipped: no discovery key set", output)
+        self.assertNotIn(KEY1, output)
 
     def test_no_env_disables_file_loading_but_keeps_process_configuration(self):
         self.write("INVALID INPUT")
