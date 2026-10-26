@@ -45,7 +45,7 @@ def mixed_failures():
     responses = [ok('requests', [{'id': '9', 'subject': PRIVATE}]),
                  *[socket.timeout(PRIVATE) for _ in range(4)],
                  Response({'response_status': {'status_code': 2000, 'status': 'success'},
-                           'asset_modules': [{'id': '67', 'name': PRIVATE}], PRIVATE: PRIVATE,
+                           'modules': [{'id': '67', 'name': PRIVATE}], PRIVATE: PRIVATE,
                            'list_info': {'has_more_rows': False}},
                           headers={'Content-Type': 'application/json'}),
                  Response({'response_status': {'status_code': 4000, 'status': 'failed',
@@ -111,7 +111,7 @@ class ContextualDiagnosticTests(unittest.TestCase):
         self.assertEqual(diag['api_codes'], [2000])
         self.assertTrue(diag['has_sdp_status'])
         self.assertEqual(diag['response_shape']['expected_wrapper'], 'all_product_types')
-        self.assertEqual(diag['response_shape']['recognized_root_types']['asset_modules'], 'array')
+        self.assertEqual(diag['response_shape']['recognized_root_types']['modules'], 'array')
         self.assertNotIn('sign-in', diag['next_step'])
 
     def test_unknown_wrapper_is_not_guessed_or_accepted_as_empty(self):

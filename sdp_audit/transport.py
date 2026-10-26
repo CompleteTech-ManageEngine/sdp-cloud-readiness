@@ -1049,11 +1049,12 @@ class ReadOnlyClient:
                         error = ApiError("network", "The API host could not be reached or the connection failed.",
                                          transport_detail=_network_detail(exc.reason))
                         transient = True
-                except http.client.HTTPException:
+                except http.client.HTTPException as exc:
                     # BadStatusLine can contain arbitrary server text;
                     # IncompleteRead can retain a partial response body. Never
                     # propagate either exception or interpolate its message.
-                    error = ApiError("network", "The API connection returned an incomplete or malformed HTTP response.")
+                    error = ApiError("network", "The API connection returned an incomplete or malformed HTTP response.",
+                                     transport_detail="HTTP_RESPONSE_INCOMPLETE" if isinstance(exc, http.client.IncompleteRead) else "HTTP_RESPONSE_MALFORMED")
                     transient = True
                 except UnicodeError:
                     error = ApiError("invalid_response", "API returned invalid Unicode text.")

@@ -101,6 +101,9 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--check-key-input", action="store_true", help="Check hidden key entry and formatting locally, then exit; no host, HTTP calls or report files. Does not authenticate the key.")
     parser.add_argument("--check-output", action="store_true", help="Create and verify a synthetic local report set and ZIP, then exit; no credentials, host or HTTP calls. Use to diagnose missing reports.")
     parser.add_argument("--checkpoint", action="store_true", help="Save sanitized instance-boundary checkpoints; finish one instance at a time. Interrupted instances restart on resume.")
+    parser.add_argument("--retry-failed", action="store_true", help="With --resume, explicitly retry instances with retained transient, parse or row-cap gaps; permanent permission/unsupported results are excluded.")
+    parser.add_argument("--retry-portals", help="With --resume, comma-separated checkpoint instance IDs to recollect, including permission gaps after access changes.")
+    parser.add_argument("--restart-all", action="store_true", help="With --resume, recollect all checkpoint instances and global work; permits explicit collection-limit changes.")
     parser.add_argument("--resume", help="Resume a checkpoint.json with fresh budgets and current explicit credentials; completed instances are reused, not reauthenticated.")
     parser.add_argument("--diagnose", action="store_true", help="Directory GETs only; no module inventory or saved-list recovery. Honors --directory-key/--directory-key-env for one requested secondary-credential attempt when initial discovery is incomplete.")
     parser.add_argument("--config", help="Optional non-secret connection settings JSON")
@@ -336,6 +339,10 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             raise ValueError("Choose only one of --check-key-input, --check-output, --diagnose or --demo.")
         if (args.checkpoint or args.resume) and (args.diagnose or args.demo or args.check_key_input or args.check_output):
             raise ValueError("Checkpoint/resume is supported only for live assessments, not diagnostics, demos or local checks.")
+        if (args.retry_failed or args.retry_portals or args.restart_all) and not args.resume:
+            raise ValueError("Retry and restart options require --resume.")
+        if args.restart_all and (args.retry_failed or args.retry_portals):
+            raise ValueError("Use --restart-all or selective retry options, not both.")
         if args.check_output:
             started = datetime.now(timezone.utc)
             output = Path(args.output_dir).expanduser().resolve() / ("output-check-" + started.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6])
@@ -485,7 +492,8 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             if args.checkpoint or args.resume:
                 runner = ResumableAssessment(client, resources, collector.options, collector.env_options,
                     progress, resolve_scope, output, resume=resume_path,
-                    requested_scope=settings.get("portal_ids") or [])
+                    requested_scope=settings.get("portal_ids") or [], retry_failed=args.retry_failed,
+                    retry_portals=args.retry_portals, restart_all=args.restart_all)
                 runner.credential_setup = credential_setup
                 runner.collect(snapshot, None if args.all_portals else settings.get("portal_ids") or None)
                 print("Verified instance-boundary checkpoint: " + str(output / "checkpoint.json"), flush=True)

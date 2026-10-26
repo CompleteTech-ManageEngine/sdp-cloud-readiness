@@ -13,6 +13,7 @@ from typing import Any, Mapping
 
 from .analyze import CLEAN, CONFIRMED, MANUAL, UNKNOWN, _safe_settings, _safe_source, analyze
 from .catalog import GLOBAL_RESOURCES, RESOURCES
+from .diagnostics import guidance
 from .models import Assessment, Dataset, EnvironmentSnapshot, Finding, PortalInfo, Snapshot
 from .sources import SOURCES
 from .response_contract import PARSE_REASONS, safe_shape
@@ -284,6 +285,12 @@ def _coverage(dataset: Dataset, portal: PortalInfo | None) -> dict[str, Any]:
     result["http_status"] = last.get("http_status", result.get("http_status"))
     result["api_codes"] = last.get("api_codes", result.get("api_codes", []))
     result["error_class"] = None if last.get("classification") == "SUCCESS" else last.get("classification")
+    if not dataset.list_complete:
+        if dataset.sample_complete:
+            result["next_step"] = "The configured parent sample completed; other parents remain uninspected. Increase --subresource-parents for a new assessment, or explicitly --restart-all when changing limits on resume."
+        else:
+            result["next_step"] = guidance({**last, "classification": outcome, "endpoint": dataset.endpoint,
+                "endpoint_name": dataset.key, "module": dataset.module or dataset.key})
     return result
 
 

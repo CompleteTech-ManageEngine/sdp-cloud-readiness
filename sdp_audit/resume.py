@@ -23,6 +23,33 @@ from .topology import discover_topology, portal_identifier
 from .transport import _binding_host
 
 MAX_CHECKPOINT_BYTES = 64 * 1024 * 1024
+RETRYABLE_OUTCOMES = {"NETWORK_ERROR", "SERVER_ERROR", "RATE_LIMITED", "PARSE_ERROR",
+                     "RECORD_LIMIT_REACHED", "REQUEST_BUDGET_REACHED", "TIME_BUDGET_REACHED"}
+
+
+def retry_candidates(entries):
+    return {pid for pid, entry in entries.items()
+            if any(row.get("outcome") in RETRYABLE_OUTCOMES for row in entry.get("coverage", []))
+            or any(field.get("status") in RETRYABLE_OUTCOMES
+                   or (field.get("status") == "INCOMPLETE"
+                       and field.get("metadata_targets_successful", 0) < field.get("metadata_targets_total", 0)
+                       and any(item.get("classification") in RETRYABLE_OUTCOMES for item in field.get("diagnostics", [])))
+                   for field in entry.get("fields", []))}
+
+
+def compatible_contract(old, new, restart_all):
+    if old == new:
+        return True
+    if not restart_all:
+        return False
+    # Explicit restart replaces all evidence, but never rebinds host, scope,
+    # credentials or answers. Only collection/metadata limits may change.
+    prior, current = deepcopy(old), deepcopy(new)
+    prior.pop("collection", None)
+    current.pop("collection", None)
+    for value in (prior, current):
+        value.get("environment", {}).pop("metadata_limit", None)
+    return prior == current
 
 
 def contract(client, options, env_options, resources, answers):
@@ -55,7 +82,7 @@ def read_checkpoint(path: Path) -> dict[str, Any]:
                 result[key] = value
             return result
         data = json.loads(raw.decode("utf-8"), object_pairs_hook=unique)
-        if (not isinstance(data, dict) or set(data) != {
+        if (not isinstance(data, dict) or set(data) - {"pending_retries"} != {
                 "schema_version", "tool_version", "run_id", "generated_at", "contract",
                 "topology", "portals", "global_coverage", "global_done", "history", "sha256"}
                 or type(data["schema_version"]) is not int or data["schema_version"] != 1
@@ -77,6 +104,9 @@ def read_checkpoint(path: Path) -> dict[str, Any]:
         topology = restore_topology(data["topology"])
         selected = {p.id for p in topology.portals if p.selected}
         if not selected or not set(data["portals"]).issubset(selected):
+            raise ValueError
+        pending = data.get("pending_retries", [])
+        if not isinstance(pending, list) or any(not isinstance(pid, str) or pid not in selected for pid in pending):
             raise ValueError
         for pid, entry in data["portals"].items():
             if (not isinstance(entry, dict) or entry.get("portal_id") != pid or
@@ -140,7 +170,8 @@ class ResumableAssessment:
     Checkpoint paths and contract are validated before directory/module reads.
     """
     def __init__(self, client, resources, options, env_options, progress, scope_resolver,
-                 output: Path, *, resume: Path | None = None, requested_scope=None):
+                 output: Path, *, resume: Path | None = None, requested_scope=None,
+                 retry_failed=False, retry_portals=None, restart_all=False):
         self.client, self.resources = client, resources
         # In checkpoint mode, finish list pagination before sampling so a
         # sampling reservation cannot be mistaken for a completed instance.
@@ -148,6 +179,9 @@ class ResumableAssessment:
         self.progress, self.scope_resolver = progress, scope_resolver
         self.output, self.resume = output, resume
         self.credential_setup = None
+        self.retry_failed, self.retry_portals, self.restart_all = retry_failed, retry_portals, restart_all
+        self.pending_retries = set()
+        self.previous_evidence = {}
         self.path = output / "checkpoint.json"
         self.requested_scope = sorted(requested_scope or [])
 
@@ -156,11 +190,15 @@ class ResumableAssessment:
         # of snapshots (which contain source records and raw descriptions).
         report = _sanitize_assessment(analyze_environment(env))
         portals = {p["portal_id"]: p for p in report["portals"] if p["portal_id"] in completed}
+        # Keep earlier committed evidence until a retry finishes. Pending IDs
+        # force subsequent continuations to retry even if those entries exist.
+        portals = {**self.previous_evidence, **portals}
         data = {"schema_version": 1, "tool_version": __version__, "run_id": run_id,
                 "generated_at": env.generated_at, "contract": binding,
                 "topology": report["environment"]["topology"], "portals": portals,
                 "global_coverage": report["global_resources"]["coverage"] if global_done else [],
-                "global_done": global_done, "history": history}
+                "global_done": global_done, "history": history,
+                "pending_retries": sorted(self.pending_retries)}
         # The report topology contains derived evidence; keep only constructor fields.
         allowed = set(Topology.__dataclass_fields__)
         data["topology"] = {key: value for key, value in data["topology"].items() if key in allowed}
@@ -193,8 +231,8 @@ class ResumableAssessment:
         run_id = str(uuid.uuid4())
         if self.resume:
             data = read_checkpoint(self.resume)
-            if data["contract"] != binding:
-                raise ValueError("Checkpoint host, collection plan, credential mode/context or analysis answers differ. Reuse the original settings; only request/time budgets, pacing and timeout may change.")
+            if not compatible_contract(data["contract"], binding, self.restart_all):
+                raise ValueError("Checkpoint host, collection plan, credential mode/context or analysis answers differ. Reuse the original settings, or use --restart-all for collection-limit changes. Host, scope, credential mode/context, modules and answers remain fixed.")
             env.topology = restore_topology(data["topology"])
             if env.topology.outcome in _TERMINAL_STOPS:
                 env.topology.directory_outcome = env.topology.directory_outcome or env.topology.outcome
@@ -210,6 +248,27 @@ class ResumableAssessment:
             history = list(data["history"])
             completed = set(env.retained_portals)
             global_done = data["global_done"]
+            selected_ids = {p.id for p in env.topology.portals if p.selected}
+            explicit = set()
+            if self.retry_portals:
+                try:
+                    explicit = {portal_identifier(value.strip()) for value in self.retry_portals.split(",")}
+                except (ValueError, AttributeError):
+                    raise ValueError("Retry instances must be comma-separated positive decimal IDs.") from None
+                if not explicit.issubset(selected_ids):
+                    raise ValueError("Retry instances must belong to the checkpoint scope.")
+            retries = set(data.get("pending_retries", [])) | explicit
+            if self.retry_failed:
+                retries |= retry_candidates(env.retained_portals)
+            if self.restart_all:
+                retries = selected_ids
+                global_done = False
+                env.retained_global_coverage = []
+            self.pending_retries = retries
+            self.previous_evidence = {pid: env.retained_portals[pid] for pid in retries if pid in env.retained_portals}
+            for pid in retries:
+                env.retained_portals.pop(pid, None)
+            completed -= retries
             # Retained evidence describes its earlier credential, never proof
             # that today's key still has that access.
             for entry in env.retained_portals.values():
@@ -242,7 +301,10 @@ class ResumableAssessment:
             env.portals[portal.id] = PortalSnapshot(portal, snapshot)
         attempt = {"pass": len(history) + 1, "started_at": datetime.now(timezone.utc).isoformat(),
                    "requests": 0, "elapsed_seconds": 0, "stop": None,
-                   "reused_instances": len(completed), "run_id": run_id}
+                   "reused_instances": len(completed), "run_id": run_id,
+                   "retried_instances": sorted(self.pending_retries),
+                   "prior_outcomes": {pid: sorted({row.get("outcome", "UNKNOWN") for row in entry.get("coverage", [])})
+                                      for pid, entry in self.previous_evidence.items()}}
         history.append(attempt)
         env.resume_history = history
         def save():
@@ -250,6 +312,8 @@ class ResumableAssessment:
                 elapsed_seconds=self.client.stats.get("elapsed_seconds", 0), stop=env.stop_classification)
             self._save(env, completed, global_done, history, binding, run_id)
         print("Resumable assessment: instance-boundary checkpoints; {} completed instances reused. Interrupted instances restart.".format(len(completed)), flush=True)
+        if self.pending_retries:
+            print("Explicit retry: {} instances will be recollected from their first read; prior reports remain intact.".format(len(self.pending_retries)), flush=True)
         save()
         print("Checkpoint file: " + str(self.path), flush=True)
         try:
@@ -258,6 +322,11 @@ class ResumableAssessment:
                     continue
                 child = EnvironmentSnapshot(env.generated_at, dict(env.source), env.settings,
                                             manual_answers=env.manual_answers)
+                if portal.id in self.pending_retries:
+                    portal.accessible = None
+                    portal.access_status = "UNKNOWN"
+                    portal.scan_status = "NOT_STARTED"
+                    portal.diagnostics = []
                 topology = replace(deepcopy(env.topology), portals=[deepcopy(portal)])
                 collector = EnvironmentCollector(self.client, self.resources, self.options,
                     replace(self.env_options, collect_orgusers=False), self.progress)
@@ -270,6 +339,8 @@ class ResumableAssessment:
                 status = self.client.credential_status(portal.id) if self.client.multi_key else "valid"
                 if child.stop_classification is None and status not in {"missing", "failed"}:
                     completed.add(portal.id)
+                    self.pending_retries.discard(portal.id)
+                    self.previous_evidence.pop(portal.id, None)
                     print("Checkpoint progress: {}/{} instances finished (coverage gaps may remain).".format(
                         len(completed), len(selected)), flush=True)
                 if child.stop_classification:

@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Iterator, Mapping
 
 from .transport import ApiError, BudgetExceeded
+from .response_contract import shape_evidence
 
 
 REQUEST_DOC = "https://www.manageengine.com/products/service-desk/on-premises/custom-help-desk-ticket-templates.html"
@@ -215,6 +216,15 @@ class FieldInventory:
 class MetadataParseError(ValueError):
     """A safe fixed-message parse error; never carries a response payload."""
 
+    def __init__(self, message):
+        self.reason = {
+            "Expected metainfo.fields mapping was missing or malformed.": "METADATA_FIELDS_MISSING",
+            "A field definition had an invalid identifier or shape.": "METADATA_FIELD_INVALID",
+            "Nested metadata fields were not a mapping.": "METADATA_NESTED_FIELDS_INVALID",
+            "A UDF holder did not expose its field-definition mapping.": "METADATA_UDF_FIELDS_MISSING",
+        }.get(message, "METADATA_CONTRACT_MISMATCH")
+        super().__init__(message)
+
 
 class MetadataContextError(MetadataParseError):
     """A metadata response explicitly identifies a different source portal."""
@@ -304,9 +314,17 @@ def normalize_metainfo(response: Mapping[str, Any], *, portal_id: str, portal_na
         if depth > 16:
             raise MetadataParseError("Metadata nesting exceeded the parser limit.")
         for name, data in definitions.items():
-            if not isinstance(name, str) or not _FIELD_NAME.fullmatch(name) or not isinstance(data, dict):
+            # Change role slots are keyed by role ID, not an API field name.
+            # Only accept the observed roles.fields lookup contract; never use
+            # a free-text role name as an internal identifier or generalize
+            # numeric keys to arbitrary metadata containers.
+            role_slot = (module == "changes" and prefix == "roles." and isinstance(name, str)
+                         and re.fullmatch(r"[0-9]{1,40}", name) and isinstance(data, dict)
+                         and _identifier(data.get("id")) == name and data.get("type") == "lookup")
+            if not isinstance(name, str) or (not _FIELD_NAME.fullmatch(name) and not role_slot) or not isinstance(data, dict):
                 raise MetadataParseError("A field definition had an invalid identifier or shape.")
             path = prefix + name
+            definition_name = "role_" + name if role_slot else name
             children = data.get("fields")
             container = data.get("type") == "udf" or name in _UDF_CONTAINERS
             additional = inherited_additional or container
@@ -317,7 +335,7 @@ def normalize_metainfo(response: Mapping[str, Any], *, portal_id: str, portal_na
                 continue
             if container:
                 raise MetadataParseError("A UDF holder did not expose its field-definition mapping.")
-            result.append(_definition(name, path, data, portal_id=portal_id,
+            result.append(_definition(definition_name, path, data, portal_id=portal_id,
                                       portal_name=portal_name, module=module,
                                       endpoint=endpoint, doc_url=doc_url,
                                       context=context or {}, additional=additional))
@@ -533,6 +551,8 @@ class FieldDiscovery:
                                           strategy="CHANGE_FORM_METAINFO", alternatives=alternatives)], 1, True)
             self.inventories["changes"].limitations.append("Change form metadata does not certify all administrator fields or every template/stage configuration.")
         for module, base in (("assets", "asset_assets"), ("computers", "asset_computers")):
+            if module == "computers" and _get(self.datasets.get(module), "endpoint") == "/asset_workstations":
+                base = "asset_workstations"
             if module not in modules:
                 continue
             legacy = self._legacy_reads(module)
@@ -736,6 +756,9 @@ class FieldDiscovery:
                 failure = ApiError(kind, str(error), http_status=_get(last_response, "http_status"),
                                    api_codes=tuple(_get(last_response, "api_codes", ())), portal_id=self.portal_id,
                                    endpoint=job.path, endpoint_name="fields." + job.module, module=job.module)
+                failure.response_format = "json_object"
+                failure.parse_reason = error.reason
+                failure.response_shape = shape_evidence(response, "metadata" if job.strategy == "CMDB_TYPE_METADATA" else "metainfo")
                 requeued = self._failure(job, failure)
             except ApiError as error:
                 self._record_target_attempt(job, before, fallback=True)
@@ -769,6 +792,8 @@ class FieldDiscovery:
     def _failure(self, job: _Read, error: ApiError) -> bool:
         inventory = self.inventories[job.module]
         diagnostic = error.to_dict()
+        if hasattr(error, "parse_reason"):
+            diagnostic.update(parse_reason=error.parse_reason, response_shape=error.response_shape)
         diagnostic.update({"portal_id": self.portal_id, "module": job.module,
                            "endpoint": job.path, "endpoint_name": "fields." + job.module,
                            "strategy": job.strategy})

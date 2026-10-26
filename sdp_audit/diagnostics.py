@@ -48,7 +48,7 @@ _CONTENT_TYPES = {"not_supplied", "other", "application/json", "application/vnd.
                   "text/html", "text/plain", "application/xml", "text/xml", "application/octet-stream"}
 _TRANSPORT = {"TLS_CERTIFICATE_VERIFICATION_FAILED", "TLS_NEGOTIATION_FAILED", "DNS_LOOKUP_FAILED",
               "CONNECTION_TIMED_OUT", "CONNECTION_REFUSED", "CONNECTION_RESET", "CONNECTION_FAILED",
-              "REDIRECT_BLOCKED"}
+              "REDIRECT_BLOCKED", "HTTP_RESPONSE_INCOMPLETE", "HTTP_RESPONSE_MALFORMED"}
 _CAUSES = {"unknown", "authentication", "authorization", "configuration", "portal_access",
            "credential_configuration",
            "module_availability", "licensing_or_module_availability", "api_compatibility",
@@ -154,6 +154,14 @@ def guidance(item: Mapping[str, Any], *, authentication: str | None = None) -> s
         return "Check certificate hostname, validity and trust chain. Supply the trusted PEM CA bundle using --ca-file; do not disable TLS verification as a default fix." + auth_note
     if data["transport_detail"] == "REDIRECT_BLOCKED":
         return "Check the final API base path for this operation. Redirects are deliberately not followed and the Location header is not printed." + auth_note
+    if classification == "CREDENTIAL_MISSING":
+        if directory:
+            return "Optional directory discovery has no assigned key. Explicit instance collection can still succeed; directory completeness remains unverified. Supply a deliberately authorized discovery key only if directory enumeration is wanted."
+        if data["endpoint"] == "/orgusers" or data["endpoint_name"] == "orgusers" or data["module"] == "orgusers":
+            return "Optional Orguser coverage requires an explicitly authorized ESM Org credential and verified context. Leave it unconfigured if unavailable; more budget or an instance key does not grant Org access. Adding a new global context requires a new assessment under the current resume binding rules."
+        return "Assign a credential explicitly to this instance; no other key is borrowed."
+    if classification == "SERVER_ERROR":
+        return "The server could not complete this GET. Retain the endpoint, HTTP/SDP codes and earlier fallback diagnostics for the administrator/vendor; this does not prove a missing role or zero records. Use --retry-failed with --resume after the cause is addressed."
     if classification == "AUTHENTICATION_FAILED":
         credential = {"directory_key": "directory-only credential", "portal_key": "assigned instance credential",
                       "global_key": "assigned global credential"}.get(data["credential_scope"], "integration key/account")
@@ -161,6 +169,8 @@ def guidance(item: Mapping[str, Any], *, authentication: str | None = None) -> s
     if classification == "PERMISSION_DENIED":
         if directory:
             return "Confirm read visibility for the portal directory. A generic 403 does not identify a required role. Continue the same run with the full verified portal list/file or a directory-only credential. Neither method changes module permissions."
+        if data["endpoint"] == "/projects" or data["endpoint_name"] == "projects" or data["module"] == "projects":
+            return "Have an administrator verify this key's intended instance and Project read visibility for this specific module operation on the installed build. HTTP 403 does not identify a required role. After an authorized change, use --resume with --retry-portals for the affected instance; directory keys and larger budgets cannot grant Project access."
         return "Confirm read permission for this specific module operation in the stated portal using the original integration key. A generic 403 does not identify a required role; directory credentials and timeout changes do not grant module access."
     if classification == "PORTAL_CONTEXT_REQUIRED":
         return "Verify the explicit PORTALID for this operation and compare any returned portal context. Do not infer a missing role from a context error; do not guess additional IDs."
@@ -184,7 +194,9 @@ def guidance(item: Mapping[str, Any], *, authentication: str | None = None) -> s
         return "Inspect the endpoint-specific response-format and contract evidence. A parse error alone does not prove an invalid key, wrong base URL or empty module. Share sanitized diagnostics, not raw responses."
     if classification == "INVALID_QUERY":
         return "The read query was rejected. Review its HTTP/SDP evidence and the installed-build contract; preserve filters and portal scope when using a documented compatibility query."
-    if classification in {"REQUEST_BUDGET_REACHED", "TIME_BUDGET_REACHED", "RECORD_LIMIT_REACHED", "RATE_LIMITED"}:
+    if classification == "RECORD_LIMIT_REACHED":
+        return "The per-collection row cap was reached, not the global HTTP budget. Use --full-inventory or a larger --max-records for a new run; on resume use --restart-all to explicitly recollect every instance when changing collection limits. Lists remain incomplete until exhaustion is observed."
+    if classification in {"REQUEST_BUDGET_REACHED", "TIME_BUDGET_REACHED", "RATE_LIMITED"}:
         return "Review the global budgets and server rate-limit response; completed scope remains complete and unqueried scope remains unknown."
     return "Review the recorded classification and HTTP/SDP evidence with the source administrator; unknown scope is not zero data or proof of Cloud readiness."
 
