@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Add opt-in `--checkpoint` and `--resume` at completed-instance boundaries, with sanitized report evidence, atomic integrity-checked files, concurrent-use locks, frozen host/scope/collection contracts, and fresh per-pass budgets. Interrupted instances restart; completed findings and coverage gaps persist without storing keys or source records. Normal collection scheduling is unchanged.
+
 - Clarify ESM key creation, roles/session safety, optional credentials, excluded-instance coverage and diagnose limits. Align generated `.env` comments with the example and explain slot-only discovery skips without exposing credentials.
 
 - Add default local `.env` loading and non-overwriting blank setup with 20 numbered instance key/portal-ID pairs, explicit host binding, additional slots, separate directory/global credentials, path override and opt-out.

@@ -8,6 +8,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Separate credentials per instance](guides/multiple-credentials.md)
 - [Default local environment file](guides/local-env.md)
 - [All portals in one run](guides/all-portals.md)
+- [Checkpoint and resume](guides/resume.md)
 - [Discovery and output troubleshooting](guides/troubleshooting.md)
 - [Windows API-key input](guides/windows-key-input.md)
 - [Configuration examples](../examples/config/README.md)

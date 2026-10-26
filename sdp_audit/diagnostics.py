@@ -238,6 +238,12 @@ def print_topology_diagnostics(env: EnvironmentSnapshot) -> None:
 
 def _diagnostic_records(env: EnvironmentSnapshot) -> list[dict[str, Any]]:
     records = [safe_diagnostic(item) for item in env.topology.diagnostics if isinstance(item, Mapping)]
+    for entry in env.retained_portals.values():
+        records.extend(safe_diagnostic(item) for item in entry.get("diagnostics", [])
+                       if isinstance(item, Mapping))
+    for row in env.retained_global_coverage:
+        records.extend(safe_diagnostic(item) for item in row.get("diagnostics", [])
+                       if isinstance(item, Mapping))
     snapshots = [item.snapshot for item in env.portals.values()]
     if env.global_snapshot is not None:
         snapshots.append(env.global_snapshot)

@@ -15,7 +15,7 @@ from typing import Any, Callable, Iterator
 from .catalog import FALLBACKS, GLOBAL_RESOURCES, RESOURCES
 from .collect import CollectionOptions, Collector
 from .fields import FieldDiscovery
-from .models import EnvironmentSnapshot, PortalInfo, PortalSnapshot, ResourceSpec, Snapshot
+from .models import EnvironmentSnapshot, PortalInfo, PortalSnapshot, ResourceSpec, Snapshot, Topology
 from .topology import discover_topology
 from .transport import ApiError, BudgetExceeded
 
@@ -309,7 +309,8 @@ class EnvironmentCollector:
         env.stats["global_limiter_instances"] = 1
         env.stats["stop_classification"] = stop
 
-    def collect(self, env: EnvironmentSnapshot, portal_ids: list[str] | None = None) -> EnvironmentSnapshot:
+    def collect(self, env: EnvironmentSnapshot, portal_ids: list[str] | None = None, *,
+                topology: Topology | None = None) -> EnvironmentSnapshot:
         queue: deque[tuple[str, str]] = deque()
         global_work: tuple[Collector, Snapshot] | None = None
         global_more = False
@@ -320,7 +321,7 @@ class EnvironmentCollector:
                 env.settings["diagnose_only"] = True
                 env.source["diagnostic_only"] = True
             self._event(event="phase", phase="topology")
-            env.topology = discover_topology(self.client, portal_ids=portal_ids,
+            env.topology = topology if topology is not None else discover_topology(self.client, portal_ids=portal_ids,
                                              page_size=self.options.page_size,
                                              max_portals=self.env_options.max_portals,
                                              progress=self.progress)
@@ -329,7 +330,7 @@ class EnvironmentCollector:
                     and env.topology.outcome == "AUTHENTICATION_FAILED"):
                 env.topology.directory_outcome = env.topology.outcome
                 env.topology.outcome = "INCOMPLETE"
-            if self.scope_resolver is not None and env.topology.outcome not in _TERMINAL_STOPS:
+            if topology is None and self.scope_resolver is not None and env.topology.outcome not in _TERMINAL_STOPS:
                 env.topology = self.scope_resolver(env.topology, env)
             for portal in env.topology.portals:
                 if not portal.selected:

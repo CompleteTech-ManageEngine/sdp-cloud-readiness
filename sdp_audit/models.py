@@ -200,3 +200,6 @@ class EnvironmentSnapshot:
     stop_classification: str | None = None
     authentication: str = "UNKNOWN"
     schema_version: str = "2.0"
+    retained_portals: dict[str, dict[str, Any]] = field(default_factory=dict)
+    retained_global_coverage: list[dict[str, Any]] = field(default_factory=list)
+    resume_history: list[dict[str, Any]] = field(default_factory=list)
