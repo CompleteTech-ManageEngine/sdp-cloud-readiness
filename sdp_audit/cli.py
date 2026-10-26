@@ -456,6 +456,9 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
                     return resolved
             source = {"host": client.base_url, "product": "ServiceDesk Plus On-Premises", "build_origin": "user_supplied" if answers.get("source_build") else "not_exposed", "key_expiration": "not_exposed_by_verified_read_only_api", "demo": False}
             snapshot = EnvironmentSnapshot(started.isoformat(), source, settings, manual_answers=answers)
+            if (slots and not args.diagnose and not os.environ.get(args.api_key_env)
+                    and settings["portal_discovery_mode"] == "explicit"):
+                print("Discovery skipped: no discovery key set; scope comes from numbered slots (or explicit scope overrides).", flush=True)
             if not args.quiet:
                 if settings["portal_discovery_mode"] == "explicit":
                     print("Scope: EXPLICIT portal selection; directory discovery is skipped. Other portals will NOT be assessed. Use --all-portals for whole-scope discovery/recovery.", flush=True)
