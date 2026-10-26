@@ -264,6 +264,10 @@ Review the callable inventory without credentials:
 python .\sdp_cloud_readiness.py --list-endpoints
 ```
 
+## Checkpoint and resume
+
+Add `--checkpoint` to opt into instance-by-instance collection with durable, sanitized checkpoints. Resume with `--resume <checkpoint.json>` and fresh `--max-requests` / `--max-minutes` budgets. Completed instances are reused; interrupted instances restart. The default scheduler is unchanged. See [resume commands, binding and limitations](resume.md). Existing runs without checkpoints cannot be resumed retroactively.
+
 ## Global pacing, budgets, and fair coverage
 
 | Setting | Default | Scope |

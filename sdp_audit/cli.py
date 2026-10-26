@@ -20,6 +20,7 @@ from .credential_setup import CredentialSetup
 from .local_env import local_environment, slot_assignments
 from .environment import EnvironmentCollector, EnvironmentOptions
 from .environment_analysis import analyze_environment
+from .resume import ResumableAssessment
 from .portal_scope import PortalScopeResolver, ScopeOptions
 from .models import Assessment, EnvironmentSnapshot
 from .progress import ProgressPrinter, print_environment_coverage
@@ -99,6 +100,8 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--key-input", choices=("auto", "console", "dialog"), default="auto", help="Auto: environment key, otherwise masked Windows dialog or hidden console. Explicit console/dialog always prompts, bypassing environment keys. Dialog requires desktop/Tcl-Tk.")
     parser.add_argument("--check-key-input", action="store_true", help="Check hidden key entry and formatting locally, then exit; no host, HTTP calls or report files. Does not authenticate the key.")
     parser.add_argument("--check-output", action="store_true", help="Create and verify a synthetic local report set and ZIP, then exit; no credentials, host or HTTP calls. Use to diagnose missing reports.")
+    parser.add_argument("--checkpoint", action="store_true", help="Save sanitized instance-boundary checkpoints; finish one instance at a time. Interrupted instances restart on resume.")
+    parser.add_argument("--resume", help="Resume a checkpoint.json with fresh budgets and current explicit credentials; completed instances are reused, not reauthenticated.")
     parser.add_argument("--diagnose", action="store_true", help="Directory GETs only; no module inventory or saved-list recovery. Honors --directory-key/--directory-key-env for one requested secondary-credential attempt when initial discovery is incomplete.")
     parser.add_argument("--config", help="Optional non-secret connection settings JSON")
     env_group = parser.add_mutually_exclusive_group()
@@ -331,6 +334,8 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             print("ServiceDesk Plus Cloud Readiness v" + __version__, flush=True)
         if sum(bool(flag) for flag in (args.check_key_input, args.check_output, args.diagnose, args.demo)) > 1:
             raise ValueError("Choose only one of --check-key-input, --check-output, --diagnose or --demo.")
+        if (args.checkpoint or args.resume) and (args.diagnose or args.demo or args.check_key_input or args.check_output):
+            raise ValueError("Checkpoint/resume is supported only for live assessments, not diagnostics, demos or local checks.")
         if args.check_output:
             started = datetime.now(timezone.utc)
             output = Path(args.output_dir).expanduser().resolve() / ("output-check-" + started.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6])
@@ -426,6 +431,9 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             if client.sanitize_local_text(str(output)) != str(output):
                 del key
                 raise ValueError("The API key must not appear in the output path.")
+            resume_path = Path(args.resume).expanduser().resolve() if args.resume else None
+            if resume_path is not None and client.sanitize_local_text(str(resume_path)) != str(resume_path):
+                raise ValueError("A credential must not appear in the checkpoint path.")
             del key
             # Fail local publication capability before consuming a single API
             # attempt. This checks directory creation plus write/read/replace.
@@ -456,11 +464,13 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
                     return resolved
             source = {"host": client.base_url, "product": "ServiceDesk Plus On-Premises", "build_origin": "user_supplied" if answers.get("source_build") else "not_exposed", "key_expiration": "not_exposed_by_verified_read_only_api", "demo": False}
             snapshot = EnvironmentSnapshot(started.isoformat(), source, settings, manual_answers=answers)
-            if (slots and not args.diagnose and not os.environ.get(args.api_key_env)
+            if (slots and not args.diagnose and not args.resume and not os.environ.get(args.api_key_env)
                     and settings["portal_discovery_mode"] == "explicit"):
                 print("Discovery skipped: no discovery key set; scope comes from numbered slots (or explicit scope overrides).", flush=True)
             if not args.quiet:
-                if settings["portal_discovery_mode"] == "explicit":
+                if args.resume:
+                    print("Scope: retained checkpoint selection; no directory refresh. Current credentials apply to remaining work.", flush=True)
+                elif settings["portal_discovery_mode"] == "explicit":
                     print("Scope: EXPLICIT portal selection; directory discovery is skipped. Other portals will NOT be assessed. Use --all-portals for whole-scope discovery/recovery.", flush=True)
                 else:
                     print("Scope: ALL discovered/verified portals in one run; directory access and shared budgets still apply.", flush=True)
@@ -472,7 +482,15 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             ), EnvironmentOptions(max_portals=settings["max_portals"], metadata_limit=settings["metadata_limit"],
                                   collect_orgusers=collect_orgusers, diagnose_only=args.diagnose), progress=progress,
                 scope_resolver=resolve_scope)
-            collector.collect(snapshot, None if args.all_portals else settings.get("portal_ids") or None)
+            if args.checkpoint or args.resume:
+                runner = ResumableAssessment(client, resources, collector.options, collector.env_options,
+                    progress, resolve_scope, output, resume=resume_path,
+                    requested_scope=settings.get("portal_ids") or [])
+                runner.credential_setup = credential_setup
+                runner.collect(snapshot, None if args.all_portals else settings.get("portal_ids") or None)
+                print("Verified instance-boundary checkpoint: " + str(output / "checkpoint.json"), flush=True)
+            else:
+                collector.collect(snapshot, None if args.all_portals else settings.get("portal_ids") or None)
         return _finish_assessment(snapshot, output, args.quiet)
     except (ValueError, OSError, ApiError, json.JSONDecodeError) as error:
         if isinstance(error, ApiError):

@@ -22,6 +22,8 @@ By default the scanner uses one collection key across selected portals. Use `--m
 
 For repeated runs, fill the local `.env` beside the source entry point or portable `.pyz`. A first normal run creates a blank scaffold without replacing an existing file; [.env.example](.env.example) supplies 20 numbered key/portal-ID pairs. Set `SDP_HOST`, the actual portal IDs, and keys locally. For 14.x/15.x ESM, see [where to create integration keys and choose roles](docs/guides/multiple-credentials.md#creating-keys-on-14x15x-esm). For 14.x/15.x ESM, see [where to create integration keys and choose roles](docs/guides/multiple-credentials.md#creating-keys-on-14x15x-esm). Populated slots enable per-instance routing; slot numbers never imply portal IDs. Process variables take precedence. Use `--env-file <path>` or `--no-env` to override loading. See [local environment setup](docs/guides/local-env.md) for syntax, scope and conflict rules.
 
+For assessments that may exceed a budget, add `--checkpoint`; continue later with `--resume <checkpoint.json>`. Completed instances are reused and the interrupted instance restarts. See [resuming assessments](docs/guides/resume.md) for commands and limits.
+
 Run an offline demonstration without credentials or network access:
 
 ```powershell

@@ -670,13 +670,22 @@ def analyze_environment(environment: EnvironmentSnapshot) -> Assessment:
             finding.evidence_basis = "USER_SUPPLIED_REQUIREMENT"
     portal_entries, field_inventories, coverage = [], [], []
     diagnostics = _diagnostics(environment.topology.diagnostics)
-    global_coverage, global_seen = [], set()
+    global_coverage = list(environment.retained_global_coverage)
+    global_seen = {row["key"] for row in global_coverage}
     if environment.global_snapshot:
         for dataset in environment.global_snapshot.datasets.values():
             global_seen.add(dataset.key)
             global_coverage.append(_coverage(dataset, None))
     for portal_id, portal_snapshot in environment.portals.items():
         portal = portal_snapshot.portal
+        if portal_id in environment.retained_portals:
+            entry = environment.retained_portals[portal_id]
+            portal_entries.append(entry)
+            coverage.extend(entry["coverage"])
+            field_inventories.extend(entry["fields"])
+            diagnostics.extend(entry["diagnostics"])
+            findings.extend(Finding(**item) for item in entry["findings"])
+            continue
         snapshot = replace(portal_snapshot.snapshot, manual_answers={**answers, **portal_snapshot.snapshot.manual_answers})
         fields = [_field_inventory(value, module, portal) for module, value in snapshot.fields.items()]
         portal_assessment = analyze(_analysis_snapshot(snapshot, fields))
@@ -798,7 +807,10 @@ def analyze_environment(environment: EnvironmentSnapshot) -> Assessment:
         generated_at=environment.generated_at, source=_environment_source(environment.source),
         settings=_environment_settings(environment.settings), findings=findings, questions=questions,
         coverage=coverage, stats=stats, sources=sources, schema_version="2.0",
-        notes=shared.notes + [
+        notes=shared.notes + ([
+            "Resumable assessment: completed instance evidence is retained from earlier passes; it is not reauthenticated or refreshed. Interrupted instances restart from their first read. Each pass has fresh request/time budgets.",
+            "Completed with coverage gaps is not complete visibility. Counts combine observations made at different times; this is not a transactional snapshot.",
+        ] if environment.resume_history else []) + [
             "Portal-specific findings retain portal IDs; matching numeric record IDs in different portals are not merged.",
             "Global resources are counted once. Portal users/technicians are membership observations; Assets, Computers and CIs overlap and are not summed into a unique asset population.",
             "Environment-wide confirmation topics are counted once; source impact and coverage remain portal-specific.",
@@ -808,6 +820,7 @@ def analyze_environment(environment: EnvironmentSnapshot) -> Assessment:
         ],
         environment={
             "summary": summary,
+            **({"resume_history": environment.resume_history} if environment.resume_history else {}),
             "topology": {"outcome": topology.outcome, "complete": topology.complete,
                          **topology_scope_evidence(topology),
                          "mode": topology.mode, "endpoint": topology.endpoint, "source": topology.source,
