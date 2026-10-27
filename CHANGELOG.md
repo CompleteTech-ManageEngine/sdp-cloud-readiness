@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Render an engagement `scope-of-work.md` from the assessment folder as branded HTML, PDF and editable Word (optional `python-docx`), with `{{consultant}}`, `{{client}}`, inventory and confirmed-impact placeholders filled from the brand and `assessment.json`; incomplete evidence stops rendering, and the figures used are recorded in `branded-manifest.json`.
+
 - Write branded copies to `branded/<Brand>/` so one assessment can be delivered under several brands without overwriting.
 
 - Add CompleteTech-branded client deliverables (preset `completetech`, `assets/logo.png`) on every run of the entry points, with `--brand <file|preset|none>`, `--prepared-for`, `--brand-assessment <folder>`, `--no-pdf`, and `SDP_BRAND_FILE`/`SDP_PREPARED_FOR` in `.env`. Copies go to `<assessment>/branded/` (report and vendor questions as HTML and PDF, findings/coverage workbook, hash manifest); the verified unbranded reports are unchanged. PDF printing uses a local headless Edge/Chrome; the workbook uses optional `openpyxl`.

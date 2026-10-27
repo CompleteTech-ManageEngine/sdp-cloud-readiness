@@ -60,6 +60,10 @@ Branded copies carry the CompleteTech LLC identity by default (preset `completet
 
 Branded copies are rendered from the run's own `assessment.json`, `findings.csv` and `coverage.csv`; the verified unbranded files are never modified, and `branded/<Brand>/branded-manifest.json` records the source and output hashes.
 
+## Scope of Work
+
+When the operator wants a Scope of Work, it is written (or copied from a previous engagement) as `scope-of-work.md` in the client's assessment folder, never in this repository. Use the placeholders in [BRANDING.md](BRANDING.md#scope-of-work) for the consultant, client and every evidence figure instead of typing numbers, then run `--brand-assessment` for each required brand. Rendering stops on incomplete evidence; report that to the operator rather than editing figures by hand. Check `scope_of_work_figures` in `branded-manifest.json` and tell the operator which figures changed from any earlier version.
+
 ## Workflow
 
 1. Confirm the goal: demo, live assessment, resume, or branding an existing folder. Relay Before you start for a live run.

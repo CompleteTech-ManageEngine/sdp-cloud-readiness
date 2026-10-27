@@ -25,7 +25,7 @@ Part of the CompleteTech LLC skill library. The repository is also an agent skil
 | Skill key | `sdp-cloud-readiness` |
 | Version | `2.2.0` |
 | Runtime | `python3` (3.10 or newer), standard library only |
-| Optional | `openpyxl` for the branded workbook; Microsoft Edge or Google Chrome for branded PDFs |
+| Optional | `openpyxl` for the branded workbook; `python-docx` for the Word Scope of Work; Microsoft Edge or Google Chrome for branded PDFs |
 | Network | Only the ServiceDesk Plus host the operator names; GET requests through one global rate limiter |
 | Homepage | https://github.com/CompleteTech-ManageEngine/sdp-cloud-readiness |
 | License | Code, templates and documentation: MIT. Brand assets are reserved; see `BRAND_ASSETS.md` |
@@ -63,6 +63,7 @@ flowchart LR
 | Credentials | One key across portals, separate keys per instance (`--multi-key`, `--credential-file`, numbered `.env` slots), and separate directory and global credentials. Keys are never printed, saved or written to reports. |
 | Long assessments | Budgets on requests and time; `--checkpoint` saves sanitized progress at instance boundaries and `--resume` continues or retries selected instances. |
 | Reports | Offline HTML, Markdown, JSON and CSV, a vendor-questions document, sanitized diagnostics, a hash manifest and a verified ZIP. |
+| Scope of Work | An engagement `scope-of-work.md` in the assessment folder renders as branded HTML, PDF and editable Word, with names and evidence figures filled from placeholders. |
 | Branded deliverables | CompleteTech-branded report and vendor questions (HTML and PDF) and a findings and coverage Excel workbook on every run; an approved engagement brand or `--brand none` on request. |
 
 ## Quick Start
@@ -108,7 +109,7 @@ For repeated runs, fill the local `.env` beside the entry point. A first normal 
 | `vendor-questions.md` | Answers and open questions for ManageEngine, owners and the project |
 | `diagnostics.json` | Sanitized discovery and request diagnostics |
 | `report-manifest.json` and the folder ZIP | SHA-256 manifest and a read-back-verified archive |
-| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment.html/.pdf`, `<Client>-Vendor-Questions.html/.pdf`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `branded-manifest.json` |
+| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment.html/.pdf`, `<Client>-Vendor-Questions.html/.pdf`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx` (with `scope-of-work.md`), `branded-manifest.json` |
 
 Exit code `0` means the reports were written and verified, not that migration is safe; `2` means the assessment is incomplete or was stopped; `1` is a startup or local output error.
 
