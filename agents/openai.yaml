@@ -1,7 +1,7 @@
 interface:
   display_name: "ServiceDesk Plus Cloud Readiness"
-  short_description: "Read-only SDP on-premises assessment for Cloud migration, with optional branded client deliverables"
-  default_prompt: "Use $sdp-cloud-readiness: relay the SKILL.md Before you start table (GET-only reads of the SDP host I name, keys only in the hidden prompt or local .env, local reports only); ask whether I want the offline demo, a live assessment, a resume, or branded copies of an existing assessment folder, and which brand file and client name the deliverables carry (unbranded unless I choose); run the demo or branding step yourself, give me the exact live command to run, then summarise portals, finding counts, coverage gaps and open vendor questions."
+  short_description: "Read-only SDP on-premises assessment for Cloud migration, with CompleteTech-branded client deliverables"
+  default_prompt: "Use $sdp-cloud-readiness: relay the SKILL.md Before you start table (GET-only reads of the SDP host I name, keys only in the hidden prompt or local .env, local reports only); ask whether I want the offline demo, a live assessment, a resume, or branded copies of an existing assessment folder, and the client name for the CompleteTech-branded deliverables (or another approved brand, or none); run the demo or branding step yourself, give me the exact live command to run, then summarise portals, finding counts, coverage gaps and open vendor questions."
 
 policy:
   allow_implicit_invocation: true

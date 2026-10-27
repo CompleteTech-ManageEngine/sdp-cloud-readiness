@@ -1,4 +1,6 @@
-# Contributing
+# Contributing to CompleteTech LLC Skills
+
+[Start here](ONBOARDING.md) · [Branding and handoffs](BRANDING.md) · [Specialist instructions](SKILL.md)
 
 Use Python 3.10 or newer. The runtime and tests use the standard library; no package installation is required. Run commands from the repository root.
 
