@@ -21,7 +21,7 @@ A CompleteTech LLC skill. See [ONBOARDING.md](ONBOARDING.md) for first use.
 |---|---|
 | Assessment | Read-only inventory and metadata collection from SDP on-premises (14.x/15.x ESM and earlier) across every accessible portal, analysed against documented Cloud migration limits. |
 | Outputs | `report.html`, `report.md`, `assessment.json`, `findings.csv`, `coverage.csv`, `vendor-questions.md`, `diagnostics.json`, a manifest and a verified ZIP, in a new timestamped folder. |
-| Branded copies | CompleteTech by default: `branded/<Client>-Cloud-Readiness-Assessment.html/.pdf`, `<Client>-Vendor-Questions.html/.pdf`, `<Client>-Assessment-Findings-and-Coverage.xlsx` and `branded-manifest.json`. |
+| Branded copies | One folder per brand, CompleteTech by default: `branded/<Brand>/<Client>-Cloud-Readiness-Assessment.html/.pdf`, `<Client>-Vendor-Questions.html/.pdf`, `<Client>-Assessment-Findings-and-Coverage.xlsx` and `branded-manifest.json`. |
 | Boundary | GET only, one global rate limiter, budgets on requests and time. An assessment is evidence, not migration approval. |
 
 Run every command from this skill's folder (the repository root). Python 3.10+; the scanner uses only the standard library. Branded workbooks need `openpyxl`; branded PDFs need a local Edge or Chrome. Both are optional and skipped with a message when missing.
@@ -58,7 +58,7 @@ Exit code 0 means reports were written and read back, not that migration is safe
 
 Branded copies carry the CompleteTech LLC identity by default (preset `completetech`: [templates/branding.completetech.json](templates/branding.completetech.json) and `assets/logo.png`). Always ask for the client name (`--prepared-for` or `SDP_PREPARED_FOR`). An approved engagement brand takes precedence: pass its file with `--brand` or set `SDP_BRAND_FILE`; `--brand none` keeps only the unbranded evidence. Do not synthesize logos or fetch artwork. Layouts, palette and asset rules are in [BRANDING.md](BRANDING.md) and [BRAND_ASSETS.md](BRAND_ASSETS.md).
 
-Branded copies are rendered from the run's own `assessment.json`, `findings.csv` and `coverage.csv`; the verified unbranded files are never modified, and `branded/branded-manifest.json` records the source and output hashes.
+Branded copies are rendered from the run's own `assessment.json`, `findings.csv` and `coverage.csv`; the verified unbranded files are never modified, and `branded/<Brand>/branded-manifest.json` records the source and output hashes.
 
 ## Workflow
 
