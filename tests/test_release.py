@@ -231,7 +231,7 @@ class ReleaseTests(unittest.TestCase):
                         self.assertNotIn(imported, unavailable_in_310)
         guarded = (self.stage / "sdp_audit" / "branded.py").read_text(encoding="utf-8")
         self.assertIn("from .branded_xlsx import write_evidence_workbook\n        except ImportError:", guarded)
-        self.assertIn("from .branded_docx import write_scope_docx\n        except ImportError:", guarded)
+        self.assertIn("from .branded_docx import write_docx\n    except ImportError:", guarded)
 
 
     def test_portable_local_key_check_is_offline_and_secret_safe(self):

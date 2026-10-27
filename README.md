@@ -25,7 +25,7 @@ Part of the CompleteTech LLC skill library. The repository is also an agent skil
 | Skill key | `sdp-cloud-readiness` |
 | Version | `2.2.0` |
 | Runtime | `python3` (3.10 or newer), standard library only |
-| Optional | `openpyxl` for the branded workbook; `python-docx` for the Word Scope of Work; Microsoft Edge or Google Chrome for branded PDFs |
+| Optional | `openpyxl` for the branded workbook; `python-docx` for Word copies; Microsoft Edge or Google Chrome for branded PDFs |
 | Network | Only the ServiceDesk Plus host the operator names; GET requests through one global rate limiter |
 | Homepage | https://github.com/CompleteTech-ManageEngine/sdp-cloud-readiness |
 | License | Code, templates and documentation: MIT. Brand assets are reserved; see `BRAND_ASSETS.md` |
@@ -109,7 +109,7 @@ For repeated runs, fill the local `.env` beside the entry point. A first normal 
 | `vendor-questions.md` | Answers and open questions for ManageEngine, owners and the project |
 | `diagnostics.json` | Sanitized discovery and request diagnostics |
 | `report-manifest.json` and the folder ZIP | SHA-256 manifest and a read-back-verified archive |
-| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment.html/.pdf`, `<Client>-Vendor-Questions.html/.pdf`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx` (with `scope-of-work.md`), `branded-manifest.json` |
+| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment` and `<Client>-Vendor-Questions` as `.html/.pdf/.docx/.md`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx/.md` (with `scope-of-work.md`), `branded-manifest.json` |
 
 Exit code `0` means the reports were written and verified, not that migration is safe; `2` means the assessment is incomplete or was stopped; `1` is a startup or local output error.
 
@@ -143,6 +143,10 @@ Deliverables carry the CompleteTech LLC identity from the `completetech` preset 
 | `dist/` | Generated portable app, release ZIP and checksums; ignored by Git |
 
 Further reading: [full usage guide](docs/guides/usage.md), [assess all portals](docs/guides/all-portals.md), [multiple credentials](docs/guides/multiple-credentials.md), [resume](docs/guides/resume.md), [coverage recovery](docs/guides/coverage-recovery.md), [branded deliverables](docs/guides/branded-deliverables.md), [Scope of Work](docs/guides/scope-of-work.md), [troubleshooting](docs/guides/troubleshooting.md), [Windows key input](docs/guides/windows-key-input.md) and the [documentation index](docs/README.md).
+
+## Printable Documentation
+
+`python .\tools\build_docs.py` renders this documentation (README, onboarding, every guide, branding and reference) as CompleteTech-branded HTML, PDF and Word, with a combined handbook, into `dist\docs\`. See [branded deliverables](docs/guides/branded-deliverables.md#printable-documentation).
 
 ## Portable Release
 

@@ -1,6 +1,6 @@
 # Scope of Work
 
-A Scope of Work (SoW) turns an assessment into a delivery commitment. The tool renders it in the chosen brand as HTML, PDF and an editable Word file, alongside the other [branded deliverables](branded-deliverables.md). The SoW text itself is engagement content written by the consultant; the tool supplies names and evidence figures and the presentation.
+A Scope of Work (SoW) turns an assessment into a delivery commitment. The tool renders it in the chosen brand as HTML, PDF, an editable Word file and Markdown, alongside the other [branded deliverables](branded-deliverables.md). The SoW text itself is engagement content written by the consultant; the tool supplies names and evidence figures and the presentation.
 
 ## Where the SoW lives
 

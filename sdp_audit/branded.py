@@ -8,14 +8,16 @@ identities can coexist) from the assessment's own ``assessment.json``,
 * ``<Client>-Cloud-Readiness-Assessment.html`` and ``.pdf``
 * ``<Client>-Vendor-Questions.html`` and ``.pdf``
 * ``<Client>-Assessment-Findings-and-Coverage.xlsx``
-* ``<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html``, ``.pdf`` and ``.docx``
+* Word (``.docx``) and Markdown (``.md``) copies of the report, the vendor
+  questions and the Scope of Work, with the brand in the header and footer
+* ``<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html``, ``.pdf``, ``.docx`` and ``.md``
   when the assessment folder holds an engagement ``scope-of-work.md``
 * ``branded-manifest.json`` with SHA-256 hashes of sources and outputs
 
 HTML needs only the standard library. PDFs are printed from the branded HTML by
 a locally installed Edge or Chrome in headless mode (no network: the pages load
 nothing external and the browser runs with networking disabled). The workbook
-needs ``openpyxl`` and the Word Scope of Work ``python-docx``. A missing optional tool is reported and skipped; it never
+needs ``openpyxl`` and the Word copies ``python-docx``. A missing optional tool is reported and skipped; it never
 fails the assessment.
 """
 
@@ -33,7 +35,7 @@ from typing import Callable
 
 from . import __version__
 from .artifacts import atomic_write_bytes
-from .branding import Brand, slug
+from .branding import Brand, markdown_header, slug
 from .report import render_branded_questions_html, render_branded_report_html
 from .scope_of_work import Figures, document_title, parse, render_html as render_scope_html
 
@@ -102,14 +104,20 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         f"{stem}-Cloud-Readiness-Assessment.html": render_branded_report_html(data, brand),
         f"{stem}-Vendor-Questions.html": render_branded_questions_html(data, brand),
     }
+    # Markdown documents for the Word and Markdown copies: (file stem, document type, Markdown).
+    documents: list[tuple[str, str, str]] = []
+    for name, doc_type, stem_suffix in (("report.md", "Cloud Readiness Assessment", "Cloud-Readiness-Assessment"),
+                                        ("vendor-questions.md", "Vendor Questions", "Vendor-Questions")):
+        if (folder / name).is_file():
+            documents.append((f"{stem}-{stem_suffix}", doc_type, (folder / name).read_text(encoding="utf-8-sig")))
     scope_source = folder / SCOPE_OF_WORK
     scope_figures: dict[str, str] = {}
-    scope_blocks = None
     if scope_source.is_file():
         figures = Figures(data, brand)
-        scope_blocks = parse(figures.fill(scope_source.read_text(encoding="utf-8-sig")))
+        scope_text = figures.fill(scope_source.read_text(encoding="utf-8-sig"))
         scope_figures = figures.used
-        pages[f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work.html"] = render_scope_html(scope_blocks, brand)
+        pages[f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work.html"] = render_scope_html(parse(scope_text), brand)
+        documents.append((f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work", "Scope of Work", scope_text))
     for name, text in pages.items():
         atomic_write_bytes(output / name, text.encode("utf-8"))
         written[name] = output / name
@@ -127,14 +135,19 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
                 except (OSError, subprocess.SubprocessError):
                     skipped.append("PDF: " + target.name + " could not be printed by the local browser")
 
-    if scope_blocks is not None:
-        try:
-            from .branded_docx import write_scope_docx
-        except ImportError:
-            skipped.append("Scope of Work: install python-docx to add the editable Word copy")
-        else:
-            target = output / f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work.docx"
-            write_scope_docx(scope_blocks, brand, document_title(scope_blocks), target)
+    for file_stem, doc_type, text in documents:
+        target = output / f"{file_stem}.md"
+        atomic_write_bytes(target, (markdown_header(brand, doc_type) + text).encode("utf-8"))
+        written[target.name] = target
+    try:
+        from .branded_docx import write_docx
+    except ImportError:
+        skipped.append("Word: install python-docx to add editable .docx copies")
+    else:
+        for file_stem, doc_type, text in documents:
+            blocks = parse(text)
+            target = output / f"{file_stem}.docx"
+            write_docx(blocks, brand, document_title(blocks, doc_type), doc_type, target)
             written[target.name] = target
 
     findings, coverage = folder / "findings.csv", folder / "coverage.csv"

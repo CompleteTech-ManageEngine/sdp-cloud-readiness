@@ -19,7 +19,7 @@ SOURCE = """# Fictional Migration
 
 ## Scope of Work
 
-**Prepared for {{client}}**
+**Prepared for {{client}}**  
 **Prepared by {{consultant}}**
 
 {{consultant}} shall assess {{portal_count}} portals at {{source_url}} as of {{assessment_date}}.
@@ -34,7 +34,7 @@ SOURCE = """# Fictional Migration
 | Party | Responsibility |
 | --- | --- |
 | {{consultant}} | Lead delivery |
-"""
+""".replace("{{client}}**\n", "{{client}}**" + "  " + "\n")  # explicit Markdown hard break; editors strip trailing spaces
 
 
 class ScopeOfWorkTests(unittest.TestCase):
@@ -95,6 +95,11 @@ class ScopeOfWorkTests(unittest.TestCase):
             (folder / "scope-of-work.md").write_text(SOURCE, encoding="utf-8")
             written = write_branded_pack(folder, self.brand, pdf=False, log=lambda _: None)
             self.assertIn("Client-One-ServiceDesk-Plus-Cloud-Scope-of-Work.html", written)
+            for stem in ("Cloud-Readiness-Assessment", "Vendor-Questions", "ServiceDesk-Plus-Cloud-Scope-of-Work"):
+                markdown = (folder / f"branded/Fictional-Advisory/Client-One-{stem}.md").read_text(encoding="utf-8")
+                self.assertTrue(markdown.startswith("**Fictional Advisory**"))
+                if importlib.util.find_spec("docx"):
+                    self.assertIn(f"Client-One-{stem}.docx", written)
             manifest = json.loads((folder / "branded/Fictional-Advisory/branded-manifest.json").read_text(encoding="utf-8"))
             self.assertIn("scope-of-work.md", [item["name"] for item in manifest["sources"]])
             self.assertEqual(manifest["scope_of_work_figures"]["{{client}}"], "Client <One>")

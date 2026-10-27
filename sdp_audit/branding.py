@@ -245,3 +245,12 @@ def html_footer(brand: Brand) -> str:
 def html_title(brand: Brand, title: str) -> str:
     return " · ".join(part for part in (brand.prepared_for, title) if part) + " | " + brand.name
 
+
+def markdown_header(brand: Brand, doc_type: str) -> str:
+    """Brand block prepended to a branded Markdown copy."""
+    lines = [f"**{brand.name}** · {doc_type}"]
+    if brand.prepared_for:
+        lines.append(f"Prepared for **{brand.prepared_for}**")
+    if brand.contact:
+        lines.append(brand.contact)
+    return "  \n".join(lines) + "\n\n---\n\n"
