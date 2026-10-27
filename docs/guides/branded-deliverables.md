@@ -8,15 +8,17 @@ Identity rules, the CompleteTech palette and the brand file format are in [BRAND
 
 | File | Content | Needs |
 | --- | --- | --- |
-| `<Client>-Cloud-Readiness-Assessment.html` / `.pdf` | The full report: masthead, prepared by/for, all findings, coverage and sources | PDF: Edge or Chrome |
-| `<Client>-Vendor-Questions.html` / `.pdf` | Answers and open questions, one question per printed page | PDF: Edge or Chrome |
+| `<Client>-Cloud-Readiness-Assessment.html` / `.pdf` / `.docx` / `.md` | The full report: masthead, prepared by/for, all findings, coverage and sources | PDF: Edge or Chrome; Word: `python-docx` |
+| `<Client>-Vendor-Questions.html` / `.pdf` / `.docx` / `.md` | Answers and open questions, one question per printed page | PDF: Edge or Chrome; Word: `python-docx` |
 | `<Client>-Assessment-Findings-and-Coverage.xlsx` | Cover sheet with counts, then every row of `findings.csv` and `coverage.csv`, filterable | `openpyxl` |
-| `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` | The engagement Scope of Work, when `scope-of-work.md` is present (see [Scope of Work](scope-of-work.md)) | PDF: Edge or Chrome; Word: `python-docx` |
+| `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` / `.md` | The engagement Scope of Work, when `scope-of-work.md` is present (see [Scope of Work](scope-of-work.md)) | PDF: Edge or Chrome; Word: `python-docx` |
 | `branded-manifest.json` | SHA-256 of every source and output, Scope of Work figures used, anything skipped | — |
 
 `<Client>` is the `--prepared-for` name with spaces replaced by hyphens. `<Brand>` is the brand's company name, for example `CompleteTech-LLC`.
 
 Install the optional packages once: `python -m pip install openpyxl python-docx`. Without them the run still succeeds and `branded-manifest.json` lists what was skipped.
+
+Every document has the same text in each format. HTML and PDF are for reading and sending; the Word copy is for editing (brand band in the header, contact line and page numbers in the footer); the Markdown copy carries a brand line and suits version control or pasting into other tools. The Word report is long (several hundred pages for a large assessment) because it holds every evidence table; use it as an editable reference.
 
 ## Choose the identity
 
@@ -46,6 +48,18 @@ Run it once per brand to deliver the same evidence under several identities; eac
 3. Confirm the branded set was built from the assessment you intend (the manifest lists the source `assessment.json` hash and the assessment folder).
 4. Remember that reports contain internal identifiers, structure and configuration findings. A branded file does not authorize sending, publication or migration approval.
 
+## Printable documentation
+
+The repository documentation itself (README, onboarding, every guide, branding, reference and validation records) can be rendered in the same branded style, as HTML, PDF and Word, plus a combined handbook with a contents page:
+
+```powershell
+python .\tools\build_docs.py                 # CompleteTech LLC, into dist\docs\CompleteTech-LLC\
+python .\tools\build_docs.py --no-pdf        # HTML and Word only
+python .\tools\build_docs.py --brand <file>  # another approved brand
+```
+
+The handbook (`ServiceDesk-Plus-Cloud-Readiness-Handbook.pdf` / `.docx`) collects the user, operator and branding documents in reading order. `dist\` is not committed.
+
 ## PDFs
 
 PDFs are printed from the branded HTML by a locally installed Microsoft Edge or Google Chrome in headless mode with networking disabled. The browser is found automatically on Windows and macOS; set `SDP_PDF_BROWSER` to a Chromium-based browser executable to choose one. Use `--no-pdf` to skip printing, for example on a server without a browser. A large assessment can produce a report PDF of several hundred pages; the HTML is the faster way to read it.
@@ -58,5 +72,5 @@ PDFs are printed from the branded HTML by a locally installed Microsoft Edge or 
 | `Brand file or preset not found` | The `--brand` path or preset name does not exist. Check the path, or list `templates\`. |
 | `Default branding preset not found beside the app` | A portable `.pyz` was copied without its `templates\` and `assets\` folders. Use the extracted release folder; the assessment itself is unaffected. |
 | `Skipped PDF: no Edge or Chrome found` | Install Edge or Chrome, or set `SDP_PDF_BROWSER`. |
-| `Skipped Workbook: install openpyxl` / `Scope of Work: install python-docx` | Install the optional package and re-run `--brand-assessment`. |
+| `Skipped Workbook: install openpyxl` / `Word: install python-docx` | Install the optional package and re-run `--brand-assessment`. |
 | `Scope of Work figure '…' is not complete` | See [Scope of Work](scope-of-work.md#when-rendering-stops). |

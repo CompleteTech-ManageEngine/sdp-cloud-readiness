@@ -27,12 +27,12 @@ import re
 from typing import Any, Mapping
 
 from .branding import Brand
+from .markdown_doc import body_html, document_title, parse  # noqa: F401 - re-exported for callers
 
 TOKEN = re.compile(r"\{\{\s*([a-z_]+)(?::([A-Za-z0-9_+]+))?\s*\}\}")
 INVENTORY = (("incident_templates", "Incident templates"), ("service_templates", "Service templates"),
              ("reports", "Query-report entries"), ("support_groups", "Support groups"),
              ("technicians", "Technician memberships"))
-PAGEBREAK = "<!-- pagebreak -->"
 
 
 def _number(value: int) -> str:
@@ -112,98 +112,33 @@ class Figures:
         return TOKEN.sub(replace, text)
 
 
-def parse(markdown: str) -> list[tuple[str, Any]]:
-    """Split the supported Markdown subset into blocks: heading, para, list, table, pagebreak."""
-    blocks: list[tuple[str, Any]] = []
-    lines = markdown.replace("\r\n", "\n").split("\n")
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        stripped = line.strip()
-        if not stripped:
-            i += 1
-        elif stripped == PAGEBREAK:
-            blocks.append(("pagebreak", None))
-            i += 1
-        elif re.match(r"#{1,6} ", stripped):
-            level = len(stripped) - len(stripped.lstrip("#"))
-            blocks.append(("heading", (level, stripped[level:].strip())))
-            i += 1
-        elif stripped.startswith("|"):
-            rows = []
-            while i < len(lines) and lines[i].strip().startswith("|"):
-                cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
-                if not all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
-                    rows.append(cells)
-                i += 1
-            blocks.append(("table", rows))
-        elif stripped.startswith("- "):
-            items = []
-            while i < len(lines) and lines[i].strip().startswith("- "):
-                items.append(lines[i].strip()[2:].strip())
-                i += 1
-            blocks.append(("list", items))
-        else:
-            para = []
-            while i < len(lines) and lines[i].strip() and not re.match(r"(#{1,6} |\||- |<!--)", lines[i].strip()):
-                para.append(lines[i].rstrip("\n"))
-                i += 1
-            blocks.append(("para", para))
-    return blocks
-
-
-def inline_html(text: str) -> str:
-    out = html.escape(text, quote=False)
-    out = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", out)
-    return re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)",
-                  lambda m: f'<a href="{html.escape(m.group(2))}">{m.group(1)}</a>', out)
-
-
-def body_html(blocks: list[tuple[str, Any]]) -> str:
-    out = []
-    for kind, value in blocks:
-        if kind == "pagebreak":
-            out.append('<div class="page-break"></div>')
-        elif kind == "heading":
-            level, text = value
-            out.append(f"<h{level}>{inline_html(text)}</h{level}>")
-        elif kind == "para":
-            out.append("<p>" + "<br>".join(inline_html(line.strip()) for line in value) + "</p>")
-        elif kind == "list":
-            out.append("<ul>" + "".join(f"<li>{inline_html(item)}</li>" for item in value) + "</ul>")
-        elif kind == "table":
-            head, *rows = value
-            out.append('<div class="table-scroll"><table><thead><tr>' + "".join(f"<th>{inline_html(c)}</th>" for c in head)
-                       + "</tr></thead><tbody>" + "".join("<tr>" + "".join(f"<td>{inline_html(c)}</td>" for c in row) + "</tr>" for row in rows)
-                       + "</tbody></table></div>")
-    return "\n".join(out)
-
-
-def document_title(blocks: list[tuple[str, Any]]) -> str:
-    for kind, value in blocks:
-        if kind == "heading" and value[0] == 1:
-            return value[1]
-    return "Scope of Work"
-
-
 def render_html(blocks: list[tuple[str, Any]], brand: Brand) -> str:
+    return render_document_html(blocks, brand, "Scope of Work",
+                                "Scope of Work rendered from the engagement's Markdown source. Evidence figures are filled "
+                                "from the assessment's assessment.json; see branded-manifest.json.")
+
+
+def render_document_html(blocks: list[tuple[str, Any]], brand: Brand, doc_type: str, footer: str) -> str:
+    """Branded, offline HTML page for any parsed Markdown document."""
     from .report import _STYLE, _apply_brand
-    title = document_title(blocks)
+    title = document_title(blocks, doc_type)
     document = (
         '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         '<meta name="referrer" content="no-referrer">'
         '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; '
         'style-src \'unsafe-inline\'; img-src \'none\'; connect-src \'none\'; base-uri \'none\'; form-action \'none\'">'
-        "<title>Scope of Work</title>"
+        f"<title>{html.escape(doc_type)}</title>"
         f"<style>{_STYLE}\n"
         "p{white-space:normal;}h2{margin-top:30px;}h3{font-size:18px;margin:26px 0 8px;color:var(--accent);}"
-        "td,th{white-space:normal;}.page-break{height:0;}"
-        "@media print{.page-break{break-after:page;}h2,h3{break-after:avoid;}table{font-size:9pt;}}</style>"
+        "td,th{white-space:normal;overflow-wrap:break-word;}th{word-break:normal;}.page-break{height:0;}"
+        "code{font-family:Consolas,'Courier New',monospace;font-size:.9em;background:var(--surface);padding:0 3px;border-radius:3px;}"
+        "pre{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:12px;overflow-x:auto;white-space:pre;}"
+        "pre code{background:none;padding:0;}"
+        "@media print{.page-break{break-after:page;}h2,h3{break-after:avoid;}table{font-size:9pt;}pre{white-space:pre-wrap;}}</style>"
         "</head><body><main>"
         f"{body_html(blocks)}"
-        "<footer>Scope of Work rendered from the engagement's Markdown source. Evidence figures are filled from the "
-        "assessment's assessment.json; see branded-manifest.json.</footer>"
+        f"<footer>{html.escape(footer)}</footer>"
         "</main></body></html>\n"
     )
-    return _apply_brand(document, brand, title + " · Scope of Work", "Scope of Work")
+    return _apply_brand(document, brand, title + " · " + doc_type, doc_type)

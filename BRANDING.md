@@ -21,10 +21,10 @@ Each brand gets its own folder under `branded/`, so the same assessment can be d
 
 | File | Content | Needs |
 |---|---|---|
-| `<Client>-Cloud-Readiness-Assessment.html` / `.pdf` | The full report with brand band, accent stripe, prepared by/for block and footer | PDF: local Edge or Chrome |
-| `<Client>-Vendor-Questions.html` / `.pdf` | Vendor questions, one question per printed page | PDF: local Edge or Chrome |
+| `<Client>-Cloud-Readiness-Assessment.html` / `.pdf` / `.docx` / `.md` | The full report with brand band, accent stripe, prepared by/for block and footer | PDF: local Edge or Chrome; Word: `python-docx` |
+| `<Client>-Vendor-Questions.html` / `.pdf` / `.docx` / `.md` | Vendor questions, one question per printed page | PDF: local Edge or Chrome; Word: `python-docx` |
 | `<Client>-Assessment-Findings-and-Coverage.xlsx` | Cover sheet with counts, then every row of `findings.csv` and `coverage.csv` | `openpyxl` |
-| `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` | The engagement Scope of Work, when the assessment folder holds `scope-of-work.md` | PDF: Edge or Chrome; Word: `python-docx` |
+| `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` / `.md` | The engagement Scope of Work, when the assessment folder holds `scope-of-work.md` | PDF: Edge or Chrome; Word: `python-docx` |
 | `branded-manifest.json` | SHA-256 of the source files and every output, the Scope of Work figures used, and anything skipped | — |
 
 Branded copies are rendered from the run's own `assessment.json`, `findings.csv` and `coverage.csv`. The unbranded reports, manifest and ZIP are never modified; they remain the verified evidence. Branded HTML keeps the offline Content-Security-Policy (no scripts, no network) and only allows `data:` images for the embedded logo. PDFs are printed by a headless browser with networking disabled; `SDP_PDF_BROWSER` selects a Chromium-based browser and `--no-pdf` skips printing.

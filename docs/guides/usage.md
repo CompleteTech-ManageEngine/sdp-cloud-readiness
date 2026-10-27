@@ -10,7 +10,7 @@ The main on-premises API catalog was reviewed on **7 October 2026**; directory d
 
 ## Branded deliverables and Scope of Work
 
-Each run also writes client-ready copies to `<assessment>/branded/<Brand>/` with the CompleteTech LLC identity: the report and vendor questions as HTML and PDF, a findings and coverage workbook, and, when the folder holds an engagement `scope-of-work.md`, the Scope of Work as HTML, PDF and Word. Name the client with `--prepared-for "Client Name"`; choose another approved brand with `--brand`, or none with `--brand none`. `--brand-assessment <folder>` brands an existing assessment offline. The verified reports below are never modified. See [branded deliverables](branded-deliverables.md) and [Scope of Work](scope-of-work.md).
+Each run also writes client-ready copies to `<assessment>/branded/<Brand>/` with the CompleteTech LLC identity: the report and vendor questions as HTML, PDF, Word and Markdown, a findings and coverage workbook, and, when the folder holds an engagement `scope-of-work.md`, the Scope of Work in the same four formats. Name the client with `--prepared-for "Client Name"`; choose another approved brand with `--brand`, or none with `--brand none`. `--brand-assessment <folder>` brands an existing assessment offline. The verified reports below are never modified. See [branded deliverables](branded-deliverables.md) and [Scope of Work](scope-of-work.md).
 
 ## Default local environment
 

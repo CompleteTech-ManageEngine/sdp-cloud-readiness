@@ -11,6 +11,9 @@
 
 ## Unreleased
 
+- Add Word (`.docx`) and Markdown copies of the branded report and vendor questions alongside HTML and PDF, and a Markdown copy of the Scope of Work; every branded document now comes in the same four formats from one shared Markdown reader. Large tables are written directly so a full assessment converts in seconds.
+- Add `tools/build_docs.py` to render the repository documentation as branded HTML, PDF and Word, with a combined handbook and contents page.
+
 - Document branded deliverables and the Scope of Work: new guides `docs/guides/branded-deliverables.md` and `docs/guides/scope-of-work.md`, validation record `docs/development/branding-validation.md`, and links from the usage, local-environment and troubleshooting guides and the documentation index.
 
 - Render an engagement `scope-of-work.md` from the assessment folder as branded HTML, PDF and editable Word (optional `python-docx`), with `{{consultant}}`, `{{client}}`, inventory and confirmed-impact placeholders filled from the brand and `assessment.json`; incomplete evidence stops rendering, and the figures used are recorded in `branded-manifest.json`.

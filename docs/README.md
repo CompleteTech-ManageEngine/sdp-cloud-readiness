@@ -29,6 +29,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Start here: onboarding](../ONBOARDING.md)
 - [Agent skill instructions](../SKILL.md)
 - [Repository README](../README.md)
+- Printable PDF and Word copies of all documentation: `python tools/build_docs.py` (see [branded deliverables](guides/branded-deliverables.md#printable-documentation))
 
 ## Development and releases
 
