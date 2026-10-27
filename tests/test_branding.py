@@ -157,12 +157,15 @@ class PresetTests(unittest.TestCase):
                 resolve_brand_path("no-such-brand", Path(directory))
             self.assertEqual(main(["--no-env", "--quiet", "--brand", "none", "--brand-assessment", directory]), 1)
 
-    def test_entry_point_default_is_completetech_and_library_main_is_unbranded(self):
+    def test_entry_point_default_brand_applies_and_library_main_is_unbranded(self):
         import argparse
         from sdp_audit import cli
+        from sdp_audit.branding import resolve_brand_path
+        from sdp_audit.local_env import application_directory
+        expected = load_brand(resolve_brand_path(cli.DEFAULT_BRAND, application_directory())).name
         args = argparse.Namespace(brand=None, prepared_for=None, brand_assessment=None)
         with unittest.mock.patch.dict("os.environ", {"SDP_BRAND_FILE": "", "SDP_PREPARED_FOR": ""}):
             self.assertIsNone(cli._brand(args))
             with unittest.mock.patch.object(cli, "_default_brand", cli.DEFAULT_BRAND):
-                self.assertEqual(cli._brand(args).name, "CompleteTech LLC")
+                self.assertEqual(cli._brand(args).name, expected)
                 self.assertIsNone(cli._brand(argparse.Namespace(brand="none", prepared_for=None, brand_assessment=None)))
