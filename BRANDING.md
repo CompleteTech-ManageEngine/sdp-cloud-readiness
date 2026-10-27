@@ -24,9 +24,24 @@ Each brand gets its own folder under `branded/`, so the same assessment can be d
 | `<Client>-Cloud-Readiness-Assessment.html` / `.pdf` | The full report with brand band, accent stripe, prepared by/for block and footer | PDF: local Edge or Chrome |
 | `<Client>-Vendor-Questions.html` / `.pdf` | Vendor questions, one question per printed page | PDF: local Edge or Chrome |
 | `<Client>-Assessment-Findings-and-Coverage.xlsx` | Cover sheet with counts, then every row of `findings.csv` and `coverage.csv` | `openpyxl` |
-| `branded-manifest.json` | SHA-256 of the source files and every output, plus anything skipped | — |
+| `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` | The engagement Scope of Work, when the assessment folder holds `scope-of-work.md` | PDF: Edge or Chrome; Word: `python-docx` |
+| `branded-manifest.json` | SHA-256 of the source files and every output, the Scope of Work figures used, and anything skipped | — |
 
 Branded copies are rendered from the run's own `assessment.json`, `findings.csv` and `coverage.csv`. The unbranded reports, manifest and ZIP are never modified; they remain the verified evidence. Branded HTML keeps the offline Content-Security-Policy (no scripts, no network) and only allows `data:` images for the embedded logo. PDFs are printed by a headless browser with networking disabled; `SDP_PDF_BROWSER` selects a Chromium-based browser and `--no-pdf` skips printing.
+
+## Scope of Work
+
+The Scope of Work is engagement content: write it as `scope-of-work.md` in the client's assessment folder (it never belongs in this repository). Placeholders keep it tied to the brand and the evidence, so the same text renders for any approved identity and its figures cannot drift from `assessment.json`:
+
+| Placeholder | Value |
+|---|---|
+| `{{consultant}}`, `{{client}}` | Brand name and `--prepared-for` client |
+| `{{source_url}}`, `{{assessment_date}}`, `{{portal_count}}` | Assessed host, assessment date, portals assessed |
+| `{{inventory_table}}` | Per-portal incident and service templates, query reports, support groups and technician memberships, with totals |
+| `{{inventory_total:KEY}}` | Total for a collection key; join keys with `+`, e.g. `incident_templates+service_templates` |
+| `{{impact_total:RULE}}`, `{{impact_portals:RULE}}` | Affected count and portals of a confirmed impact, e.g. `DUPLICATE_SERVICE_TAGS` |
+
+Supported Markdown: headings, paragraphs (two trailing spaces break a line), `-` bullets, pipe tables, `**bold**`, `[text](https://…)` links and `<!-- pagebreak -->`. Rendering stops on an unknown placeholder, a missing client name, an absent impact, or an inventory figure whose list traversal was incomplete: contract figures must come from complete evidence. The values used are recorded in `branded-manifest.json`. A rendered Scope of Work is a draft until both parties sign it.
 
 ## CompleteTech palette
 

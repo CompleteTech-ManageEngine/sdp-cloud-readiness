@@ -8,12 +8,14 @@ identities can coexist) from the assessment's own ``assessment.json``,
 * ``<Client>-Cloud-Readiness-Assessment.html`` and ``.pdf``
 * ``<Client>-Vendor-Questions.html`` and ``.pdf``
 * ``<Client>-Assessment-Findings-and-Coverage.xlsx``
+* ``<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html``, ``.pdf`` and ``.docx``
+  when the assessment folder holds an engagement ``scope-of-work.md``
 * ``branded-manifest.json`` with SHA-256 hashes of sources and outputs
 
 HTML needs only the standard library. PDFs are printed from the branded HTML by
 a locally installed Edge or Chrome in headless mode (no network: the pages load
 nothing external and the browser runs with networking disabled). The workbook
-needs ``openpyxl``. A missing optional tool is reported and skipped; it never
+needs ``openpyxl`` and the Word Scope of Work ``python-docx``. A missing optional tool is reported and skipped; it never
 fails the assessment.
 """
 
@@ -33,6 +35,9 @@ from . import __version__
 from .artifacts import atomic_write_bytes
 from .branding import Brand, slug
 from .report import render_branded_questions_html, render_branded_report_html
+from .scope_of_work import Figures, document_title, parse, render_html as render_scope_html
+
+SCOPE_OF_WORK = "scope-of-work.md"
 
 PDF_TIMEOUT_SECONDS = 600
 _BROWSERS = (
@@ -97,6 +102,14 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         f"{stem}-Cloud-Readiness-Assessment.html": render_branded_report_html(data, brand),
         f"{stem}-Vendor-Questions.html": render_branded_questions_html(data, brand),
     }
+    scope_source = folder / SCOPE_OF_WORK
+    scope_figures: dict[str, str] = {}
+    scope_blocks = None
+    if scope_source.is_file():
+        figures = Figures(data, brand)
+        scope_blocks = parse(figures.fill(scope_source.read_text(encoding="utf-8-sig")))
+        scope_figures = figures.used
+        pages[f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work.html"] = render_scope_html(scope_blocks, brand)
     for name, text in pages.items():
         atomic_write_bytes(output / name, text.encode("utf-8"))
         written[name] = output / name
@@ -114,6 +127,16 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
                 except (OSError, subprocess.SubprocessError):
                     skipped.append("PDF: " + target.name + " could not be printed by the local browser")
 
+    if scope_blocks is not None:
+        try:
+            from .branded_docx import write_scope_docx
+        except ImportError:
+            skipped.append("Scope of Work: install python-docx to add the editable Word copy")
+        else:
+            target = output / f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work.docx"
+            write_scope_docx(scope_blocks, brand, document_title(scope_blocks), target)
+            written[target.name] = target
+
     findings, coverage = folder / "findings.csv", folder / "coverage.csv"
     if findings.is_file() and coverage.is_file():
         try:
@@ -128,7 +151,7 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         skipped.append("Workbook: findings.csv or coverage.csv is missing")
 
     sources = [path for path in (source, findings, coverage, folder / "vendor-questions.md",
-                                 folder / "report-manifest.json") if path.is_file()]
+                                 folder / "report-manifest.json", scope_source) if path.is_file()]
     manifest = {
         "tool_version": __version__,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -139,6 +162,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         "outputs": [{"name": name, "sha256": _sha256(path)} for name, path in sorted(written.items())],
         "skipped": skipped,
     }
+    if scope_figures:
+        manifest["scope_of_work_figures"] = scope_figures
     atomic_write_bytes(output / "branded-manifest.json", (json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
     written["branded-manifest.json"] = output / "branded-manifest.json"
     log("Branded copies (" + brand.name + (", prepared for " + brand.prepared_for if brand.prepared_for else "") + "):")

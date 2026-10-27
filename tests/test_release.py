@@ -211,9 +211,10 @@ class ReleaseTests(unittest.TestCase):
         runtime_paths = [self.stage / "__main__.py", self.stage / "sdp_cloud_readiness.py"]
         runtime_paths.extend(sorted((self.stage / "sdp_audit").glob("*.py")))
         allowed = set(sys.stdlib_module_names) | {"sdp_audit"}
-        # The branded workbook is optional: only this module may import openpyxl,
-        # and branded.py imports it behind an ImportError guard.
-        optional = {"branded_xlsx.py": {"openpyxl"}}
+        # The branded workbook and Word Scope of Work are optional: only these
+        # modules may import openpyxl/docx, and branded.py imports them behind
+        # ImportError guards.
+        optional = {"branded_xlsx.py": {"openpyxl"}, "branded_docx.py": {"docx"}}
         # A module existing only in newer Python cannot satisfy the 3.10 floor.
         unavailable_in_310 = {"tomllib", "annotationlib", "compression", "_interpreters", "interpreters"}
         for path in runtime_paths:
@@ -230,6 +231,7 @@ class ReleaseTests(unittest.TestCase):
                         self.assertNotIn(imported, unavailable_in_310)
         guarded = (self.stage / "sdp_audit" / "branded.py").read_text(encoding="utf-8")
         self.assertIn("from .branded_xlsx import write_evidence_workbook\n        except ImportError:", guarded)
+        self.assertIn("from .branded_docx import write_scope_docx\n        except ImportError:", guarded)
 
 
     def test_portable_local_key_check_is_offline_and_secret_safe(self):
