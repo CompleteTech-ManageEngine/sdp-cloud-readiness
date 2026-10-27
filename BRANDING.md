@@ -41,7 +41,7 @@ The Scope of Work is engagement content: write it as `scope-of-work.md` in the c
 | `{{inventory_total:KEY}}` | Total for a collection key; join keys with `+`, e.g. `incident_templates+service_templates` |
 | `{{impact_total:RULE}}`, `{{impact_portals:RULE}}` | Affected count and portals of a confirmed impact, e.g. `DUPLICATE_SERVICE_TAGS` |
 
-Supported Markdown: headings, paragraphs (two trailing spaces break a line), `-` bullets, pipe tables, `**bold**`, `[text](https://…)` links and `<!-- pagebreak -->`. Rendering stops on an unknown placeholder, a missing client name, an absent impact, or an inventory figure whose list traversal was incomplete: contract figures must come from complete evidence. The values used are recorded in `branded-manifest.json`. A rendered Scope of Work is a draft until both parties sign it.
+Supported Markdown: headings, paragraphs (two trailing spaces break a line), `-` bullets, pipe tables, `**bold**`, `[text](https://…)` links and `<!-- pagebreak -->`. Rendering stops on an unknown placeholder, a missing client name, an absent impact, or an inventory figure whose list traversal was incomplete: contract figures must come from complete evidence. The values used are recorded in `branded-manifest.json`. A rendered Scope of Work is a draft until both parties sign it. Step-by-step guides: [branded deliverables](docs/guides/branded-deliverables.md) and [Scope of Work](docs/guides/scope-of-work.md).
 
 ## CompleteTech palette
 

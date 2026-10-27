@@ -1,0 +1,62 @@
+# Branded client deliverables
+
+Every assessment produces two sets of files. The **verified evidence set** (`report.html`, `report.md`, `assessment.json`, the CSVs, `vendor-questions.md`, diagnostics, manifest and ZIP) is written, read back and hashed; it is never modified afterwards. The **branded set** is a presentation copy of that evidence for the client, written to `<assessment>/branded/<Brand>/`.
+
+Identity rules, the CompleteTech palette and the brand file format are in [BRANDING.md](../../BRANDING.md). This guide covers day-to-day use.
+
+## What you get
+
+| File | Content | Needs |
+| --- | --- | --- |
+| `<Client>-Cloud-Readiness-Assessment.html` / `.pdf` | The full report: masthead, prepared by/for, all findings, coverage and sources | PDF: Edge or Chrome |
+| `<Client>-Vendor-Questions.html` / `.pdf` | Answers and open questions, one question per printed page | PDF: Edge or Chrome |
+| `<Client>-Assessment-Findings-and-Coverage.xlsx` | Cover sheet with counts, then every row of `findings.csv` and `coverage.csv`, filterable | `openpyxl` |
+| `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` | The engagement Scope of Work, when `scope-of-work.md` is present (see [Scope of Work](scope-of-work.md)) | PDF: Edge or Chrome; Word: `python-docx` |
+| `branded-manifest.json` | SHA-256 of every source and output, Scope of Work figures used, anything skipped | — |
+
+`<Client>` is the `--prepared-for` name with spaces replaced by hyphens. `<Brand>` is the brand's company name, for example `CompleteTech-LLC`.
+
+Install the optional packages once: `python -m pip install openpyxl python-docx`. Without them the run still succeeds and `branded-manifest.json` lists what was skipped.
+
+## Choose the identity
+
+| Situation | Command |
+| --- | --- |
+| CompleteTech LLC (default) | `python .\sdp_cloud_readiness.py --all-portals --prepared-for "Client Name"` |
+| Another approved brand | add `--brand C:\path\to\branding.json` (or a preset name from `templates\`) |
+| Evidence only, no branded copies | add `--brand none` |
+| Same settings on every run | set `SDP_PREPARED_FOR` and, if needed, `SDP_BRAND_FILE` in `.env` ([local environment](local-env.md#branded-copies)) |
+
+Command-line values override `.env`. The private IT Impact Consulting edition of this repository uses the same options with its own default brand.
+
+## Brand an existing assessment
+
+Branded copies can be produced at any time from a finished assessment folder, without a host, keys or network:
+
+```powershell
+python .\sdp_cloud_readiness.py --prepared-for "Client Name" --brand-assessment .\sdp-assessments\assessment-YYYYMMDD-HHMMSS-xxxxxx
+```
+
+Run it once per brand to deliver the same evidence under several identities; each brand gets its own folder. Re-running for the same brand replaces that brand's files, which is how you refresh deliverables after editing `scope-of-work.md` or upgrading the tool.
+
+## Before you send anything
+
+1. Open the branded report and Scope of Work and read them as the client will: masthead, client name, figures, signature block.
+2. Compare `branded-manifest.json` → `scope_of_work_figures` with any earlier version you shared, and call out changed figures.
+3. Confirm the branded set was built from the assessment you intend (the manifest lists the source `assessment.json` hash and the assessment folder).
+4. Remember that reports contain internal identifiers, structure and configuration findings. A branded file does not authorize sending, publication or migration approval.
+
+## PDFs
+
+PDFs are printed from the branded HTML by a locally installed Microsoft Edge or Google Chrome in headless mode with networking disabled. The browser is found automatically on Windows and macOS; set `SDP_PDF_BROWSER` to a Chromium-based browser executable to choose one. Use `--no-pdf` to skip printing, for example on a server without a browser. A large assessment can produce a report PDF of several hundred pages; the HTML is the faster way to read it.
+
+## Troubleshooting
+
+| Message | Meaning and fix |
+| --- | --- |
+| `Branded copies need a brand file` | `--prepared-for` or `--brand-assessment` was used with branding disabled. Remove `--brand none` / `SDP_BRAND_FILE=none`, or pass `--brand`. |
+| `Brand file or preset not found` | The `--brand` path or preset name does not exist. Check the path, or list `templates\`. |
+| `Default branding preset not found beside the app` | A portable `.pyz` was copied without its `templates\` and `assets\` folders. Use the extracted release folder; the assessment itself is unaffected. |
+| `Skipped PDF: no Edge or Chrome found` | Install Edge or Chrome, or set `SDP_PDF_BROWSER`. |
+| `Skipped Workbook: install openpyxl` / `Scope of Work: install python-docx` | Install the optional package and re-run `--brand-assessment`. |
+| `Scope of Work figure '…' is not complete` | See [Scope of Work](scope-of-work.md#when-rendering-stops). |

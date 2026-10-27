@@ -142,7 +142,7 @@ Deliverables carry the CompleteTech LLC identity from the `completetech` preset 
 | `tools/` | Release tooling |
 | `dist/` | Generated portable app, release ZIP and checksums; ignored by Git |
 
-Further reading: [full usage guide](docs/guides/usage.md), [assess all portals](docs/guides/all-portals.md), [multiple credentials](docs/guides/multiple-credentials.md), [resume](docs/guides/resume.md), [coverage recovery](docs/guides/coverage-recovery.md), [troubleshooting](docs/guides/troubleshooting.md), [Windows key input](docs/guides/windows-key-input.md) and the [documentation index](docs/README.md).
+Further reading: [full usage guide](docs/guides/usage.md), [assess all portals](docs/guides/all-portals.md), [multiple credentials](docs/guides/multiple-credentials.md), [resume](docs/guides/resume.md), [coverage recovery](docs/guides/coverage-recovery.md), [branded deliverables](docs/guides/branded-deliverables.md), [Scope of Work](docs/guides/scope-of-work.md), [troubleshooting](docs/guides/troubleshooting.md), [Windows key input](docs/guides/windows-key-input.md) and the [documentation index](docs/README.md).
 
 ## Portable Release
 

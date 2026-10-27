@@ -5,6 +5,8 @@ explains why no modules were assessed. A missing local report needs filesystem
 verification. The earlier console text did not establish the underlying server
 error or why a file could not be found. Do not infer either cause from that text.
 
+For branded copies, PDFs, the workbook or the Scope of Work, see [branded deliverables — troubleshooting](branded-deliverables.md#troubleshooting) and [Scope of Work — when rendering stops](scope-of-work.md#when-rendering-stops).
+
 ## 1. Verify which program is running
 
 Extract 2.0.2 to a fresh folder rather than mixing source files from several
