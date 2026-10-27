@@ -30,6 +30,14 @@ Run an offline demonstration without credentials or network access:
 python .\sdp_cloud_readiness.py --demo --output-dir .\sdp-assessments
 ```
 
+## Branded client deliverables
+
+Add `--brand <brand.json> --prepared-for "Client Name"` to any run, or set `SDP_BRAND_FILE` and `SDP_PREPARED_FOR` in `.env`, to also write client-ready copies to `<assessment>/branded/`: the report and vendor questions as branded HTML and PDF, and a findings/coverage Excel workbook. Re-brand an existing assessment offline with `--brand-assessment <folder>`. The brand file lives outside this repository, which ships no company identity; the verified unbranded reports are never modified. See [branding](BRANDING.md).
+
+## Use as an agent skill
+
+This repository is also a skill: [SKILL.md](SKILL.md) tells an agent how to run the demo, hand the operator the live command, brand deliverables and report back. Install the whole folder under the agent's skills directory with the name `sdp-cloud-readiness`, for example `~/.claude/skills/sdp-cloud-readiness` for Claude Code (a clone, or a junction/symlink to this checkout).
+
 ## Configuration and guides
 
 Copy the needed files from [examples/config](examples/config) to your working directory and replace their fictional values. Keep credentials out of these files.
@@ -55,7 +63,8 @@ python .\sdp_cloud_readiness.py --config .\connection.json
 | `docs/reference/` | API research, field discovery, and diagnostic contracts |
 | `docs/development/` | Validation evidence and release verification |
 | `docs/releases/` | Detailed version-specific behavior notes |
-| `examples/config/` | Non-secret configuration templates |
+| `examples/config/` | Non-secret configuration templates, including a fictional brand file |
+| `SKILL.md`, `agents/` | Agent skill instructions and metadata |
 | `examples/*-assessment/` | Committed synthetic report examples |
 | `tools/` | Release tooling |
 | `dist/` | Generated portable app, release ZIP, and checksums; ignored by Git |

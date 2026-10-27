@@ -23,6 +23,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from .models import Assessment
 from .artifacts import verify_bytes
+from .branding import Brand, html_css, html_footer, html_masthead, html_title
 from .diagnostics import guidance
 
 
@@ -1033,6 +1034,74 @@ def _atomic_write(destination: Path, contents: str) -> None:
     finally:
         if temp_path is not None:
             temp_path.unlink(missing_ok=True)
+
+
+_CSP_NO_IMAGES = "img-src 'none'"
+_DOC_TYPE = "Cloud Readiness Assessment"
+
+
+def _brand_reference(brand: Brand) -> str:
+    return "ServiceDesk Plus · " + brand.prepared_for if brand.prepared_for else "ServiceDesk Plus"
+
+
+def _apply_brand(document: str, brand: Brand, title: str, doc_type: str, gutter: int = 40) -> str:
+    """Add an operator brand to a finished offline report without changing its content.
+
+    The CSP is widened only to data: images so the embedded logo can render;
+    scripts, connections and external styles remain blocked.
+    """
+    if _CSP_NO_IMAGES not in document or "<body><main>" not in document or "</footer>" not in document:
+        raise ValueError("Report layout is not recognized for branding.")
+    document = document.replace(_CSP_NO_IMAGES, "img-src data:" if brand.logo else _CSP_NO_IMAGES, 1)
+    document = re.sub(r"<title>.*?</title>", lambda _: "<title>" + _h(html_title(brand, title)) + "</title>", document, count=1)
+    head, _, tail = document.partition("</style>")
+    document = head + html_css(brand, gutter) + "</style>" + tail
+    document = document.replace("<body><main>", "<body><main>" + html_masthead(brand, doc_type, _brand_reference(brand)), 1)
+    if brand.logo:
+        document = document.replace("No external scripts, styles, images or analytics are loaded.",
+                                    "No external scripts, styles, images or analytics are loaded (the logo is embedded).", 1)
+        document = document.replace("It loads no external scripts, styles, images, or analytics.",
+                                    "It loads no external scripts, styles, images, or analytics (the logo is embedded).", 1)
+    head, _, tail = document.rpartition("</footer>")
+    return head + html_footer(brand) + "</footer>" + tail
+
+
+def render_branded_report_html(data: Mapping[str, Any], brand: Brand) -> str:
+    """Branded copy of report.html from sanitized assessment data (assessment.json)."""
+    return _apply_brand(_render_html(data), brand, "SDP Cloud Readiness", _DOC_TYPE)
+
+
+def render_branded_questions_html(data: Mapping[str, Any], brand: Brand) -> str:
+    """Branded vendor-questions document with the same content as vendor-questions.md."""
+    if data.get("environment"):
+        title = "ServiceDesk Plus migration — portal-aware answers and confirmation questions"
+        intro = ("Each answer separates source evidence, API coverage, target unknowns, vendor commitments and project decisions. "
+                 "Source-only reads cannot prove future migration behavior.")
+        questions = _environment_questions_html(data) or '<p class="muted">No structured questions were produced.</p>'
+    else:
+        title = "ServiceDesk Plus migration — answers and confirmation questions"
+        intro = ("Observed answers summarize the read-only scan. Items requiring confirmation remain open "
+                 "until the responsible owner or ManageEngine supplies evidence. A local answer is not "
+                 "proof of a vendor entitlement or a supported migration behavior.")
+        questions = _html_questions(data)
+    document = (
+        '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="referrer" content="no-referrer">'
+        '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; '
+        'style-src \'unsafe-inline\'; img-src \'none\'; connect-src \'none\'; base-uri \'none\'; form-action \'none\'">'
+        "<title>Vendor questions</title>"
+        f"<style>{_STYLE}\nh4{{font-size:15px;margin:20px 0 8px;color:var(--accent);}}"
+        ".question{break-inside:auto;}@media print{.question{break-before:page;}.question:first-of-type{break-before:auto;}}</style>"
+        "</head><body><main>"
+        f'<header><p class="eyebrow">Read-only environment assessment</p><h1>{_h(title)}</h1>'
+        f'<p class="subtitle">{_h(intro)}</p><p>Generated: {_h(data.get("generated_at"))}</p></header>'
+        f"<section>{questions}</section>"
+        "<footer>Standalone offline document. No external scripts, styles, images or analytics are loaded. "
+        "The Markdown and JSON files remain the authoritative evidence.</footer>"
+        "</main></body></html>\n"
+    )
+    return _apply_brand(document, brand, "SDP Migration Vendor Questions", "Vendor Questions")
 
 
 def render_report_documents(assessment: Assessment) -> dict[str, str]:

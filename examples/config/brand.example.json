@@ -1,0 +1,25 @@
+{
+  "company": {
+    "name": "Example Consulting",
+    "website": "consulting.example",
+    "email": "hello@consulting.example",
+    "tagline": "Fictional identity for testing branded copies"
+  },
+  "logo": "",
+  "themes": {
+    "light": {
+      "page": "#FFFFFF",
+      "band": "#1F2937",
+      "band_ink": "#FFFFFF",
+      "accent": "#B91C1C",
+      "accent_2": "#0EA5E9",
+      "ink": "#0F172A",
+      "ink_2": "#334155",
+      "ink_3": "#64748B",
+      "line": "#E2E8F0",
+      "surface": "#F8FAFC",
+      "surface_2": "#F1F5F9",
+      "link": "#0E7490"
+    }
+  }
+}
