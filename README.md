@@ -1,87 +1,165 @@
+[Agent instructions](SKILL.md) · [Usage guide](docs/guides/usage.md) · [Branding](BRANDING.md) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+
 # ServiceDesk Plus Cloud Readiness
 
-A local, read-only assessment of ManageEngine ServiceDesk Plus on-premises before migration to Cloud. It collects available inventory and metadata, records coverage gaps, and produces offline HTML, JSON, CSV, and Markdown reports.
+A local, read-only assessment of ManageEngine ServiceDesk Plus on-premises before migration to ServiceDesk Plus Cloud. It discovers every accessible portal, collects inventory and metadata through reviewed GET requests, measures the evidence against documented Cloud migration limits, and produces offline reports that separate confirmed impact from what remains unknown. With an operator-supplied brand file, the same run also produces client-ready branded deliverables.
 
-**Python 3.10+ · standard library only · version 2.2.0**
+**Python 3.10+ · standard library only · version 2.2.0 · MIT License**
 
 This is an independent assessment tool, not a ManageEngine product or migration utility.
 
-## Start an assessment
+## About
 
-From the repository root, run either Windows launcher or the Python entry point:
+Migration planning needs evidence, not assumptions. The scanner reads the source installation the way an administrator would, within the visibility of the integration keys provided, and records exactly what it could and could not establish. Every finding carries its evidence basis, affected and examined counts, coverage, and a recommended action; every gap is reported rather than hidden. The output answers three questions for each portal: what will be affected, what could not be assessed and why, and what still needs a vendor or owner decision.
 
-```powershell
-.\Run-All-Portals.cmd
-# Or:
-python .\sdp_cloud_readiness.py
+The repository is also an agent skill. [SKILL.md](SKILL.md) instructs an agent to run the demonstration, hand the operator the live command, brand deliverables and summarize the outcome.
+
+## Skill Metadata
+
+| Item | Value |
+|---|---|
+| Skill key | `sdp-cloud-readiness` |
+| Version | `2.2.0` |
+| Runtime | `python3` (3.10 or newer), standard library only |
+| Optional | `openpyxl` for the branded workbook; Microsoft Edge or Google Chrome for branded PDFs |
+| Network | Only the ServiceDesk Plus host the operator names; GET requests through one global rate limiter |
+| Install | Place the whole folder in the agent's skills directory as `sdp-cloud-readiness` (for Claude Code, `~/.claude/skills/sdp-cloud-readiness`) |
+
+## Workflow Diagram
+
+Source: [assets/diagrams/workflow.mmd](assets/diagrams/workflow.mmd).
+
+```mermaid
+flowchart LR
+  A[Host and hidden API keys] --> B[Portal discovery]
+  B --> C[GET-only module inventory and field metadata]
+  C --> D[Analysis against documented Cloud limits]
+  D --> E[Verified reports, manifest and ZIP]
+  E --> F{Brand file supplied?}
+  F -->|No| G[Unbranded evidence set]
+  F -->|Yes| H[Branded HTML, PDF and workbook]
+  classDef source fill:#eef2f6,stroke:#334155,color:#0f172a;
+  classDef gate fill:#fff7e6,stroke:#c97a12,color:#3d2600;
+  classDef output fill:#eefaf0,stroke:#2f8f46,color:#12351d;
+  class A,B,C,D,E source;
+  class F gate;
+  class G,H output;
 ```
 
-Provide your ServiceDesk Plus URL and API key through the prompts. Keys are never accepted as literal command-line arguments or saved in reports. Reports go to a new timestamped directory under `sdp-assessments/` by default.
+## What It Does
 
-By default the scanner uses one collection key across selected portals. Use `--multi-key` for secure per-instance prompts, or `--credential-file` for explicit environment-reference assignments. An optional global credential is separate from directory discovery and instance collection. Missing access remains an explicit coverage gap. See [multiple credentials](docs/guides/multiple-credentials.md) for setup and limitations.
+| Capability | Details |
+|---|---|
+| Portal discovery | Enumerates every visible ESM portal, or accepts an administrator-verified portal list when directory access is unavailable. No portal ID is guessed. |
+| Inventory and metadata | Requests, problems, changes, projects, releases, assets, computers, CIs and CI types, contracts, purchases, incident and service templates, sites, support groups, technicians, users, organization users, reports and field definitions, with paginated lists, sampled details and module-aware custom-field discovery. |
+| Migration analysis | Applies documented Cloud limits (history windows, attachment sizes, field lengths, option normalization, template complexity, duplicate identities and more) and classifies each finding as Confirmed impact, No issue observed, Unknown or Manual confirmation. |
+| Coverage accounting | Records per portal and module whether lists completed, which details were sampled, and the HTTP/SDP evidence behind every gap, with specific recovery guidance. |
+| Credentials | One key across portals, separate keys per instance (`--multi-key`, `--credential-file`, numbered `.env` slots), and separate directory and global credentials. Keys are never printed, saved or written to reports. |
+| Long assessments | Budgets on requests and time; `--checkpoint` saves sanitized progress at instance boundaries and `--resume` continues or retries selected instances. |
+| Reports | Offline HTML, Markdown, JSON and CSV, a vendor-questions document, sanitized diagnostics, a hash manifest and a verified ZIP. |
+| Branded deliverables | Report and vendor questions as branded HTML and PDF, plus a findings and coverage Excel workbook, under a brand file kept outside this repository. |
 
-For repeated runs, fill the local `.env` beside the source entry point or portable `.pyz`. A first normal run creates a blank scaffold without replacing an existing file; [.env.example](.env.example) supplies 20 numbered key/portal-ID pairs. Set `SDP_HOST`, the actual portal IDs, and keys locally. For 14.x/15.x ESM, see [where to create integration keys and choose roles](docs/guides/multiple-credentials.md#creating-keys-on-14x15x-esm). For 14.x/15.x ESM, see [where to create integration keys and choose roles](docs/guides/multiple-credentials.md#creating-keys-on-14x15x-esm). Populated slots enable per-instance routing; slot numbers never imply portal IDs. Process variables take precedence. Use `--env-file <path>` or `--no-env` to override loading. See [local environment setup](docs/guides/local-env.md) for syntax, scope and conflict rules.
+## Quick Start
 
-For assessments that may exceed a budget, add `--checkpoint`; continue later with `--resume <checkpoint.json>`. Completed instances are reused and the interrupted instance restarts. See [resuming assessments](docs/guides/resume.md) for commands and limits.
-
-Run an offline demonstration without credentials or network access:
-
-```powershell
-python .\sdp_cloud_readiness.py --demo --output-dir .\sdp-assessments
-```
-
-## Branded client deliverables
-
-Add `--brand <brand.json> --prepared-for "Client Name"` to any run, or set `SDP_BRAND_FILE` and `SDP_PREPARED_FOR` in `.env`, to also write client-ready copies to `<assessment>/branded/`: the report and vendor questions as branded HTML and PDF, and a findings/coverage Excel workbook. Re-brand an existing assessment offline with `--brand-assessment <folder>`. The brand file lives outside this repository, which ships no company identity; the verified unbranded reports are never modified. See [branding](BRANDING.md).
-
-## Use as an agent skill
-
-This repository is also a skill: [SKILL.md](SKILL.md) tells an agent how to run the demo, hand the operator the live command, brand deliverables and report back. Install the whole folder under the agent's skills directory with the name `sdp-cloud-readiness`, for example `~/.claude/skills/sdp-cloud-readiness` for Claude Code (a clone, or a junction/symlink to this checkout).
-
-## Configuration and guides
-
-Copy the needed files from [examples/config](examples/config) to your working directory and replace their fictional values. Keep credentials out of these files.
+From the repository root (or an extracted release):
 
 ```powershell
-Copy-Item .\examples\config\connection.example.json .\connection.json
-python .\sdp_cloud_readiness.py --config .\connection.json
+# Offline demonstration: synthetic portals, no credentials or network
+python .\sdp_cloud_readiness.py --demo
+
+# Live assessment of every accessible portal (prompts for the host and a hidden API key)
+python .\sdp_cloud_readiness.py --all-portals
+
+# The same, with branded client deliverables
+python .\sdp_cloud_readiness.py --all-portals --brand C:\path\to\branding.json --prepared-for "Client Name"
 ```
 
-- [Full usage guide](docs/guides/usage.md): options, reports, limits, and privacy boundaries.
-- [Assess all portals](docs/guides/all-portals.md): discovery, explicit scope, and recovery.
-- [Troubleshooting](docs/guides/troubleshooting.md) and [Windows key input](docs/guides/windows-key-input.md).
-- [Documentation index](docs/README.md), [changelog](CHANGELOG.md), and [contributor guide](CONTRIBUTING.md).
-- [Synthetic assessment](examples/synthetic-assessment/report.md) and [recovery assessment](examples/recovery-assessment/report.md).
+On Windows, `Run-All-Portals.cmd` and `Run-Assessment.cmd` start the same assessment. Reports go to a new timestamped folder under `sdp-assessments/`.
 
-## Repository layout
+For repeated runs, fill the local `.env` beside the entry point. A first normal run creates a blank scaffold without replacing an existing file; [.env.example](.env.example) shows `SDP_HOST`, optional directory and global keys, 20 numbered key/portal-ID pairs, and the optional `SDP_BRAND_FILE` and `SDP_PREPARED_FOR`. Process variables take precedence; use `--env-file <path>` or `--no-env` to override loading. See [local environment setup](docs/guides/local-env.md) and, for 14.x/15.x ESM, [where to create integration keys and choose roles](docs/guides/multiple-credentials.md#creating-keys-on-14x15x-esm).
+
+| Task | Command |
+|---|---|
+| Restrict to explicit portals | `--portal-ids 1,3` |
+| Separate key per instance | `--multi-key` or `--credential-file credentials.json` |
+| Save resume points / continue | `--checkpoint`, then `--resume <checkpoint.json>` |
+| Retry gaps after access changes | `--resume <checkpoint.json> --retry-failed` or `--retry-portals 3,5` |
+| Brand an existing assessment, offline | `--brand <brand.json> --prepared-for "Client" --brand-assessment <folder>` |
+| Diagnose directory discovery only | `--diagnose` |
+| Check local report output | `--check-output` |
+| All options | `--help` |
+
+## Outputs
+
+| File | Purpose |
+|---|---|
+| `report.html` | Standalone offline report: outcomes, scope notes, coverage, findings with actions, vendor questions, sources |
+| `report.md` | The same content in Markdown |
+| `assessment.json` | Sanitized structured assessment |
+| `findings.csv`, `coverage.csv` | Every finding and every coverage row for filtering and evidence |
+| `vendor-questions.md` | Answers and open questions for ManageEngine, owners and the project |
+| `diagnostics.json` | Sanitized discovery and request diagnostics |
+| `report-manifest.json` and the folder ZIP | SHA-256 manifest and a read-back-verified archive |
+| `branded/` | With a brand file: `<Client>-Cloud-Readiness-Assessment.html/.pdf`, `<Client>-Vendor-Questions.html/.pdf`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `branded-manifest.json` |
+
+Exit code `0` means the reports were written and verified, not that migration is safe; `2` means the assessment is incomplete or was stopped; `1` is a startup or local output error.
+
+## Example
+
+![Branded report preview with a fictional brand](docs/images/example-branded-report.png)
+
+Branded report rendered from the synthetic demonstration with the fictional [brand.example.json](examples/config/brand.example.json). Unbranded examples: the [synthetic assessment](examples/synthetic-assessment/report.md) and the [recovery assessment](examples/recovery-assessment/report.md). Regenerate with `python .\sdp_cloud_readiness.py --demo --brand .\examples\config\brand.example.json --prepared-for "Northwind Health"`.
+
+## Branding
+
+This repository ships no company identity. Branded deliverables use a brand file supplied at run time, typically one maintained by a branding skill (`templates/branding.<name>.json`). It names the preparing company, a local logo and a light palette. Branded copies are rendered from the run's own evidence files and never modify the verified unbranded set. Layouts, tokens and logo rules are in [BRANDING.md](BRANDING.md).
+
+## Contents
 
 | Path | Purpose |
-| --- | --- |
-| `sdp_audit/` | Runtime package: transport, collection, analysis, and reporting |
-| `tests/` | Unit and integration tests, with synthetic fixtures |
-| `docs/guides/` | User instructions and troubleshooting |
-| `docs/reference/` | API research, field discovery, and diagnostic contracts |
-| `docs/development/` | Validation evidence and release verification |
-| `docs/releases/` | Detailed version-specific behavior notes |
-| `examples/config/` | Non-secret configuration templates, including a fictional brand file |
+|---|---|
+| `sdp_audit/` | Runtime package: transport, collection, analysis, reporting and branded copies |
 | `SKILL.md`, `agents/` | Agent skill instructions and metadata |
+| `BRANDING.md` | Brand file format and branded deliverables |
+| `tests/` | Unit and integration tests with synthetic fixtures |
+| `docs/guides/` | User instructions and troubleshooting |
+| `docs/reference/` | API research, field discovery and diagnostic contracts |
+| `docs/development/`, `docs/releases/` | Validation evidence and version notes |
+| `examples/config/` | Non-secret configuration templates, including a fictional brand file |
 | `examples/*-assessment/` | Committed synthetic report examples |
+| `assets/diagrams/` | Workflow diagram source |
 | `tools/` | Release tooling |
-| `dist/` | Generated portable app, release ZIP, and checksums; ignored by Git |
+| `dist/` | Generated portable app, release ZIP and checksums; ignored by Git |
 
-## Build a portable release
+Further reading: [full usage guide](docs/guides/usage.md), [assess all portals](docs/guides/all-portals.md), [multiple credentials](docs/guides/multiple-credentials.md), [resume](docs/guides/resume.md), [coverage recovery](docs/guides/coverage-recovery.md), [troubleshooting](docs/guides/troubleshooting.md), [Windows key input](docs/guides/windows-key-input.md) and the [documentation index](docs/README.md).
+
+## Portable Release
 
 ```powershell
 python .\tools\build_release.py
 python .\dist\sdp_cloud_readiness.pyz --version
 ```
 
-The build writes the portable app, source ZIP, Windows launchers, example HTML, and checksums to `dist/`. Extract the ZIP for a complete runnable distribution. In a source checkout, the Windows launchers use the source entry point; in an extracted release, they prefer the adjacent portable app.
+The build writes the portable app, source ZIP, Windows launchers, example HTML and checksums to `dist/`. Extract the ZIP for a complete runnable distribution; its launchers prefer the adjacent portable app.
 
-## Data handling
+## Runtime Permissions
 
-Collection is restricted to reviewed HTTP GET operations. Raw ticket descriptions, notes, attachment bodies, credentials, and unnecessary personal fields are excluded from reports. Reports still contain internal structure, identifiers, counts, and configuration findings; review them before sharing. An assessment is not migration approval or proof of complete source visibility.
+| Area | Runtime behavior |
+|---|---|
+| Execution | Local Python entry point or portable `.pyz`; optional headless Edge/Chrome to print branded PDFs. |
+| Reads | The named ServiceDesk Plus host through allowlisted GET endpoints; local `.env`, configuration, portal, credential-reference and brand files the operator supplies. |
+| Writes | A new assessment folder and ZIP under the chosen output directory; optional host-bound portal scope in the user profile only with `--save-portals`. |
+| Network | Only the ServiceDesk Plus host. Reports load nothing external; the PDF browser runs with networking disabled. |
+
+| Not Included | Boundary |
+|---|---|
+| Source changes | Never creates, updates or deletes records; no POST, PUT or DELETE. |
+| Content | Raw ticket descriptions, notes, attachment bodies and unnecessary personal fields are excluded from reports. |
+| Credentials | Keys are accepted only through the hidden prompt or environment; never as arguments, in reports or in diagnostics. |
+| Approval | An assessment is not migration approval or proof of complete source visibility. |
+
+Reports still contain internal structure, identifiers, counts and configuration findings; review them before sharing.
 
 ## License
 
-Code and documentation are released under the [MIT License](LICENSE).
+Code and documentation are released under the [MIT License](LICENSE). Brand files and logos used for branded deliverables belong to their owners and are not part of this repository.
