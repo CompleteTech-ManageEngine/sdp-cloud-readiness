@@ -1,7 +1,8 @@
 """Branded client-ready copies of a finished assessment.
 
 The six verified report files are never modified. Branded copies are written
-to ``<assessment>/branded/`` from the assessment's own ``assessment.json``,
+to ``<assessment>/branded/<Brand>/`` (one folder per brand, so several
+identities can coexist) from the assessment's own ``assessment.json``,
 ``findings.csv`` and ``coverage.csv``:
 
 * ``<Client>-Cloud-Readiness-Assessment.html`` and ``.pdf``
@@ -86,8 +87,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
     data = json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("assessment.json is not an assessment object.")
-    output = folder / "branded"
-    output.mkdir(mode=0o700, exist_ok=True)
+    output = folder / "branded" / slug(brand.name, "Brand")
+    output.mkdir(mode=0o700, parents=True, exist_ok=True)
     stem = slug(brand.prepared_for)
     written: dict[str, Path] = {}
     skipped: list[str] = []

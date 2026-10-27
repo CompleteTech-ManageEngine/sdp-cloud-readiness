@@ -122,7 +122,7 @@ class BrandedRenderingTests(unittest.TestCase):
             written = write_branded_pack(folder, self.brand, pdf=False, log=lambda _: None)
             self.assertIn("Client-One-Cloud-Readiness-Assessment.html", written)
             self.assertIn("Client-One-Vendor-Questions.html", written)
-            manifest = json.loads((folder / "branded/branded-manifest.json").read_text(encoding="utf-8"))
+            manifest = json.loads((folder / "branded/Fictional-Advisory/branded-manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["prepared_for"], "Client <One>")
             self.assertIn("assessment.json", [item["name"] for item in manifest["sources"]])
             self.assertEqual(self.documents["report.html"], (folder / "report.html").read_text(encoding="utf-8"))

@@ -4,7 +4,7 @@
 
 ## Identity of branded copies
 
-Every run of the entry points writes client-ready copies to `<assessment>/branded/` with the **CompleteTech LLC** identity: the preset [templates/branding.completetech.json](templates/branding.completetech.json) and the local `assets/logo.png`. An approved engagement brand takes precedence. Preserve the operator's explicit settings and confirm the client name before producing deliverables.
+Every run of the entry points writes client-ready copies to `<assessment>/branded/<Brand>/` (for example `branded/CompleteTech-LLC/`) with the **CompleteTech LLC** identity: the preset [templates/branding.completetech.json](templates/branding.completetech.json) and the local `assets/logo.png`. An approved engagement brand takes precedence. Preserve the operator's explicit settings and confirm the client name before producing deliverables.
 
 | Choice | How |
 |---|---|
@@ -16,6 +16,8 @@ Every run of the entry points writes client-ready copies to `<assessment>/brande
 Use the existing local `assets/logo.png` for authorized CompleteTech output. Do not synthesize replacement marks, fetch remote artwork, redistribute fonts, or move brand assets between repositories. The MIT code license does not replace the asset policy in [BRAND_ASSETS.md](BRAND_ASSETS.md). A logo must be a local PNG or JPEG of at most 2 MB; remote and data-URI logos are rejected.
 
 ## Branded copies
+
+Each brand gets its own folder under `branded/`, so the same assessment can be delivered under several identities (run `--brand-assessment` once per brand).
 
 | File | Content | Needs |
 |---|---|---|

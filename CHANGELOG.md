@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Write branded copies to `branded/<Brand>/` so one assessment can be delivered under several brands without overwriting.
+
 - Add CompleteTech-branded client deliverables (preset `completetech`, `assets/logo.png`) on every run of the entry points, with `--brand <file|preset|none>`, `--prepared-for`, `--brand-assessment <folder>`, `--no-pdf`, and `SDP_BRAND_FILE`/`SDP_PREPARED_FOR` in `.env`. Copies go to `<assessment>/branded/` (report and vendor questions as HTML and PDF, findings/coverage workbook, hash manifest); the verified unbranded reports are unchanged. PDF printing uses a local headless Edge/Chrome; the workbook uses optional `openpyxl`.
 - Package the repository as a CompleteTech LLC agent skill (`SKILL.md`, `agents/openai.yaml`, `ONBOARDING.md`, `BRANDING.md`, `BRAND_ASSETS.md`).
 

@@ -273,7 +273,7 @@ def _cover_sheet(wb, s: _Style, brand: Brand, folder_name: str, findings, covera
     heading("About this workbook")
     notes = [
         f"The CSV files in the assessment folder ({sources[0].name}, {sources[1].name}) remain the authoritative evidence; "
-        "their SHA-256 hashes are recorded in report-manifest.json and branded/branded-manifest.json. "
+        "their SHA-256 hashes are recorded in report-manifest.json and the branded-manifest.json beside this workbook. "
         "This workbook is a formatted copy for reading and filtering.",
         "The Findings and Coverage sheets hold every row and column of the CSVs with values unchanged. Counts are stored as "
         "numbers; identifiers, flags and JSON evidence are stored as text. Empty CSV fields are empty cells.",

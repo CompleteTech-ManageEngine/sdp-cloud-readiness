@@ -28,7 +28,7 @@ On Windows, run the tests with `PYTHONUTF8=1` (PowerShell: `$env:PYTHONUTF8=1`).
 python sdp_cloud_readiness.py --demo --prepared-for "Northwind Health"
 ```
 
-The demonstration uses synthetic portals and touches no network. It writes the verified report set and, under `branded/`, CompleteTech-branded HTML, PDF and workbook copies. Open them and review the layout.
+The demonstration uses synthetic portals and touches no network. It writes the verified report set and, under `branded/CompleteTech-LLC/`, CompleteTech-branded HTML, PDF and workbook copies. Open them and review the layout.
 
 ## 4. Start a real assessment separately
 

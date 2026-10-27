@@ -136,7 +136,7 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--demo", action="store_true", help="Run a synthetic multi-portal example with the actual read-only transport and mocked responses; no network or credentials")
     parser.add_argument("--demo-scenario", choices=("single", "multi", "recovery", "multi_key"), default="multi", help="Fixture used with --demo")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress lines; final result paths are still printed")
-    brand_group = parser.add_argument_group("branded copies", "Client-ready copies written to <assessment>/branded/ with the CompleteTech LLC identity unless another brand is chosen; the verified unbranded reports are never modified.")
+    brand_group = parser.add_argument_group("branded copies", "Client-ready copies written to <assessment>/branded/<Brand>/ with the CompleteTech LLC identity unless another brand is chosen; the verified unbranded reports are never modified.")
     brand_group.add_argument("--brand", help="Brand JSON path, preset name from templates/ (e.g. completetech), or 'none' for unbranded reports only. Default: SDP_BRAND_FILE, else completetech")
     brand_group.add_argument("--prepared-for", help="Client name shown as 'Prepared for' and used in branded file names. Default: SDP_PREPARED_FOR")
     brand_group.add_argument("--brand-assessment", metavar="DIR", help="Write branded copies for an existing assessment folder, then exit; no host, credentials or HTTP calls")
