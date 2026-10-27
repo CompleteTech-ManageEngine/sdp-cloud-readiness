@@ -1,9 +1,9 @@
-"""Optional presentation identity loaded from an operator-supplied brand file.
+"""Presentation identity for branded copies, loaded from a brand file or preset.
 
-The repository ships no company identity. A brand file lives outside this code
-base (for example a sibling skill's ``templates/branding.<name>.json``) and is
-read only when the operator passes ``--brand`` or sets ``SDP_BRAND_FILE``.
-Two layouts are accepted:
+A preset is ``templates/branding.<name>.json`` beside the entry point; the
+CompleteTech LLC preset (``completetech``) is the default identity of the
+entry points. Any other brand file can be passed with ``--brand`` or
+``SDP_BRAND_FILE``. Two layouts are accepted:
 
 * skill layout: ``{"company": {"name", "website", "email", "tagline"},
   "logo": "assets/logo.png", "themes": {"light": {...}}}``
@@ -49,6 +49,7 @@ class Brand:
     logo_mime: str = ""
     logo_size: tuple[int, int] = (0, 0)
     logo_path: str = ""
+    logo_background: str = ""
     tokens: Mapping[str, str] = field(default_factory=lambda: dict(DEFAULT_TOKENS))
 
     @property
@@ -102,6 +103,21 @@ def _resolve_logo(value: str, brand_dir: Path) -> Path:
     raise ValueError("Brand logo file was not found next to the brand file or its parent folders.")
 
 
+PRESET = re.compile(r"[a-z0-9][a-z0-9-]{0,40}\Z")
+
+
+def resolve_brand_path(value: str, app_dir: Path) -> Path:
+    """A file path (as given, or relative to the application folder) or a preset name."""
+    candidate = Path(value).expanduser()
+    if candidate.is_file():
+        return candidate
+    if not candidate.is_absolute() and (app_dir / candidate).is_file():
+        return app_dir / candidate
+    if PRESET.fullmatch(value) and (app_dir / "templates" / f"branding.{value}.json").is_file():
+        return app_dir / "templates" / f"branding.{value}.json"
+    raise ValueError("Brand file or preset not found. Pass a brand JSON path or a preset name from templates/.")
+
+
 def load_brand(path: str | Path, prepared_for: str = "") -> Brand:
     """Read and validate an operator brand file; never fetches anything."""
     source = Path(path).expanduser().resolve()
@@ -135,10 +151,14 @@ def load_brand(path: str | Path, prepared_for: str = "") -> Brand:
             raise ValueError("Brand logo exceeds 2 MB; use a smaller image.")
         mime, size = _image_size(logo)
         logo_path = str(resolved)
+    background = data.get("logo_background") or ""
+    if background and (not isinstance(background, str) or not HEX.fullmatch(background)):
+        raise ValueError("Brand logo_background must be a 6-digit hex value.")
     return Brand(
         name=name, website=_text(company.get("website"), "website"), email=_text(company.get("email"), "email"),
         tagline=_text(company.get("tagline"), "tagline"), prepared_for=_text(prepared_for, "prepared-for name"),
         logo=logo, logo_mime=mime, logo_size=size, logo_path=logo_path, tokens=tokens,
+        logo_background="#" + background.lstrip("#").upper() if background else "",
     )
 
 
@@ -156,7 +176,10 @@ def tint(colour: str, amount: float) -> str:
 def html_css(brand: Brand, gutter: int = 40) -> str:
     """Brand layer appended after a report's base stylesheet."""
     t = brand.tokens
-    return f"""
+    # An opaque logo sits on a tile of its own background colour inside the band.
+    tile = (f".brand-band img {{ background:{brand.logo_background}; padding:8px 14px; border-radius:6px; box-sizing:content-box; }}\n"
+            if brand.logo_background else "")
+    return tile + f"""
 :root {{ --ink:{t['ink']}; --ink-2:{t['ink_2']}; --muted:{t['ink_3']}; --line:{t['line']}; --paper:{t['page']}; --tint:{t['surface_2']};
   --band:{t['band']}; --band-ink:{t['band_ink']}; --accent:{t['accent']}; --accent-2:{t['accent_2']}; --surface:{t['surface']}; --link:{t['link']}; }}
 body {{ background:var(--tint); color:var(--ink-2); font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif; }}

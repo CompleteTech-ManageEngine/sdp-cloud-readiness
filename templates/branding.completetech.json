@@ -1,0 +1,40 @@
+{
+  "_comment": "CompleteTech LLC library preset and this tool's default identity for branded copies. The logo is the local assets/logo.png shipped with this repository (never fetched, never synthesized); see BRAND_ASSETS.md. An approved engagement brand passed with --brand takes precedence.",
+  "company": {
+    "name": "CompleteTech LLC",
+    "website": "complete.tech",
+    "email": "",
+    "tagline": "Innovation at Every Integration"
+  },
+  "logo": "assets/logo.png",
+  "logo_background": "#F8FAFC",
+  "themes": {
+    "light": {
+      "page": "#FFFFFF",
+      "band": "#0F172A",
+      "band_ink": "#FFFFFF",
+      "accent": "#1E3A8A",
+      "accent_2": "#0A84F0",
+      "ink": "#0F172A",
+      "ink_2": "#1E293B",
+      "ink_3": "#64748B",
+      "line": "#E2E8F0",
+      "surface": "#F8FAFC",
+      "surface_2": "#EEF2FF",
+      "link": "#1E40AF"
+    },
+    "dark": {
+      "page": "#1E293B",
+      "band": "#0F172A",
+      "band_ink": "#F1F5F9",
+      "accent": "#93C5FD",
+      "accent_2": "#38BDF8",
+      "ink": "#F1F5F9",
+      "ink_2": "#CBD5E1",
+      "ink_3": "#94A3B8",
+      "line": "#334155",
+      "surface": "#273449",
+      "surface_2": "#0F172A"
+    }
+  }
+}

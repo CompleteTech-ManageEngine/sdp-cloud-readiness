@@ -8,6 +8,7 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
+import unittest.mock
 import zlib
 
 from sdp_audit.branded import write_branded_pack
@@ -135,3 +136,36 @@ class BrandedRenderingTests(unittest.TestCase):
     def test_cli_brand_assessment_requires_brand_file(self):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(main(["--no-env", "--quiet", "--brand-assessment", directory]), 1)
+
+
+class PresetTests(unittest.TestCase):
+    def test_completetech_preset_resolves_with_local_logo_and_tile(self):
+        from sdp_audit.branding import html_css, resolve_brand_path
+        from sdp_audit.local_env import application_directory
+        path = resolve_brand_path("completetech", application_directory())
+        self.assertEqual(path.name, "branding.completetech.json")
+        brand = load_brand(path, "Client")
+        self.assertEqual(brand.name, "CompleteTech LLC")
+        self.assertEqual(brand.logo_mime, "image/png")
+        self.assertEqual(brand.tokens["accent"], "#1E3A8A")
+        self.assertIn("background:#F8FAFC", html_css(brand))
+
+    def test_unknown_preset_and_none(self):
+        from sdp_audit.branding import resolve_brand_path
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                resolve_brand_path("no-such-brand", Path(directory))
+            self.assertEqual(main(["--no-env", "--quiet", "--brand", "none", "--brand-assessment", directory]), 1)
+
+    def test_entry_point_default_brand_applies_and_library_main_is_unbranded(self):
+        import argparse
+        from sdp_audit import cli
+        from sdp_audit.branding import resolve_brand_path
+        from sdp_audit.local_env import application_directory
+        expected = load_brand(resolve_brand_path(cli.DEFAULT_BRAND, application_directory())).name
+        args = argparse.Namespace(brand=None, prepared_for=None, brand_assessment=None)
+        with unittest.mock.patch.dict("os.environ", {"SDP_BRAND_FILE": "", "SDP_PREPARED_FOR": ""}):
+            self.assertIsNone(cli._brand(args))
+            with unittest.mock.patch.object(cli, "_default_brand", cli.DEFAULT_BRAND):
+                self.assertEqual(cli._brand(args).name, expected)
+                self.assertIsNone(cli._brand(argparse.Namespace(brand="none", prepared_for=None, brand_assessment=None)))

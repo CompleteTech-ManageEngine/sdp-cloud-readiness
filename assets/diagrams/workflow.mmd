@@ -1,0 +1,14 @@
+flowchart LR
+  A[Host and hidden API keys] --> B[Portal discovery]
+  B --> C[GET-only module inventory and field metadata]
+  C --> D[Analysis against documented Cloud limits]
+  D --> E[Verified reports, manifest and ZIP]
+  E --> F{Brand file supplied?}
+  F -->|No| G[Unbranded evidence set]
+  F -->|Yes| H[Branded HTML, PDF and workbook]
+  classDef source fill:#eef2f6,stroke:#334155,color:#0f172a;
+  classDef gate fill:#fff7e6,stroke:#c97a12,color:#3d2600;
+  classDef output fill:#eefaf0,stroke:#2f8f46,color:#12351d;
+  class A,B,C,D,E source;
+  class F gate;
+  class G,H output;

@@ -9,7 +9,7 @@ For keys, use the root [`.env.example`](../../.env.example) or the blank `.env` 
 | [connection.example.json](connection.example.json) | Source URL, request budgets, and collection settings | `--config connection.json` |
 | [answers.example.json](answers.example.json) | Optional business context for migration findings | `--answers answers.json` |
 | [portals.example.json](portals.example.json) | Administrator-verified portal scope when discovery is unavailable | `--portal-file portals.json` |
-| [brand.example.json](brand.example.json) | Fictional brand file for branded copies; keep real brand files outside this repository | `--brand brand.json` |
+| [brand.example.json](brand.example.json) | Fictional brand file showing the format for an approved engagement brand (CompleteTech is the built-in default) | `--brand brand.json` |
 
 Keep API keys out of JSON files. Use the masked/hidden prompt or the supported environment-variable mechanism. Local files named `connection.json`, `answers.json`, and `portals.json` are ignored by Git.
 

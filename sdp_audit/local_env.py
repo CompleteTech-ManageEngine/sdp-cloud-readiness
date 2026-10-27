@@ -37,7 +37,7 @@ def scaffold() -> str:
         "# Context ID is administrator-verified, never a slot number. See credential guide.\n"
         "SDP_GLOBAL_API_KEY=\nSDP_GLOBAL_PORTAL_ID=\n"
         "# OPTIONAL SDP_BRAND_FILE and SDP_PREPARED_FOR: branded copies after each run.\n"
-        "# Brand JSON lives outside this tool; blank = unbranded reports only.\n"
+        "# Brand JSON path, preset name or none; blank = CompleteTech LLC preset.\n"
         "SDP_BRAND_FILE=\nSDP_PREPARED_FOR=\n"
         "# Slot numbers are positions, NOT portal IDs. Add 21, 22, ... if needed.\n"
     )

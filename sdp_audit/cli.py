@@ -17,7 +17,7 @@ from .catalog import ALLOWED_PATTERNS, GLOBAL_RESOURCES, RESOURCES, UNEXPOSED_FE
 from .collect import CollectionOptions
 from .credentials import acquire_api_key, prepare_api_key
 from .credential_setup import CredentialSetup
-from .local_env import local_environment, slot_assignments
+from .local_env import application_directory, local_environment, slot_assignments
 from .environment import EnvironmentCollector, EnvironmentOptions
 from .environment_analysis import analyze_environment
 from .resume import ResumableAssessment
@@ -25,7 +25,7 @@ from .portal_scope import PortalScopeResolver, ScopeOptions
 from .models import Assessment, EnvironmentSnapshot
 from .progress import ProgressPrinter, print_environment_coverage
 from .branded import write_branded_pack
-from .branding import Brand, load_brand
+from .branding import Brand, load_brand, resolve_brand_path
 from .report import render_report_documents
 from .artifacts import Publication, atomic_write_bytes, failure_metadata, prepare_output, publish_documents
 from .diagnostics import diagnostics_document, print_topology_diagnostics
@@ -136,8 +136,8 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--demo", action="store_true", help="Run a synthetic multi-portal example with the actual read-only transport and mocked responses; no network or credentials")
     parser.add_argument("--demo-scenario", choices=("single", "multi", "recovery", "multi_key"), default="multi", help="Fixture used with --demo")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress lines; final result paths are still printed")
-    brand_group = parser.add_argument_group("branded copies", "Client-ready copies written to <assessment>/branded/. The brand file lives outside this tool (for example a branding skill's templates/branding.<name>.json); the verified unbranded reports are never modified.")
-    brand_group.add_argument("--brand", help="Brand JSON (company name, website, email, local logo, light palette). Default: SDP_BRAND_FILE from the environment or .env")
+    brand_group = parser.add_argument_group("branded copies", "Client-ready copies written to <assessment>/branded/ with the CompleteTech LLC identity unless another brand is chosen; the verified unbranded reports are never modified.")
+    brand_group.add_argument("--brand", help="Brand JSON path, preset name from templates/ (e.g. completetech), or 'none' for unbranded reports only. Default: SDP_BRAND_FILE, else completetech")
     brand_group.add_argument("--prepared-for", help="Client name shown as 'Prepared for' and used in branded file names. Default: SDP_PREPARED_FOR")
     brand_group.add_argument("--brand-assessment", metavar="DIR", help="Write branded copies for an existing assessment folder, then exit; no host, credentials or HTTP calls")
     brand_group.add_argument("--no-pdf", action="store_true", help="Skip printing branded PDFs with the local Edge/Chrome")
@@ -251,15 +251,37 @@ def _print_publication(receipt: Publication) -> bool:
     return receipt.complete
 
 
+# Identity of branded copies when neither --brand nor SDP_BRAND_FILE is set.
+# The entry points opt in; library callers of main() stay unbranded.
+DEFAULT_BRAND = "completetech"
+_default_brand = ""
+
+
+def use_default_brand() -> None:
+    global _default_brand
+    _default_brand = DEFAULT_BRAND
+
+
 def _brand(args: argparse.Namespace) -> Brand | None:
-    path = args.brand or os.environ.get("SDP_BRAND_FILE", "").strip()
+    explicit = args.brand or os.environ.get("SDP_BRAND_FILE", "").strip()
+    path = explicit or _default_brand
     prepared_for = args.prepared_for if args.prepared_for is not None else os.environ.get("SDP_PREPARED_FOR", "")
+    if path.lower() == "none":
+        return None
     if not path:
         if args.prepared_for or args.brand_assessment:
             raise ValueError("Branded copies need a brand file: pass --brand or set SDP_BRAND_FILE.")
         return None
     try:
-        return load_brand(path, prepared_for)
+        resolved = resolve_brand_path(path, application_directory())
+    except ValueError:
+        if explicit:
+            raise
+        # A portable app copied without templates/ still assesses; it just cannot brand.
+        print("Default branding preset not found beside the app; writing unbranded reports only.", file=sys.stderr)
+        return None
+    try:
+        return load_brand(resolved, prepared_for)
     except (OSError, json.JSONDecodeError, UnicodeError):
         raise ValueError("Brand file could not be read as UTF-8 JSON. Check the --brand or SDP_BRAND_FILE path.") from None
 
