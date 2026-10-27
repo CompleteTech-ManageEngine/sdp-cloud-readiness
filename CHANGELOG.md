@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Document branded deliverables and the Scope of Work: new guides `docs/guides/branded-deliverables.md` and `docs/guides/scope-of-work.md`, validation record `docs/development/branding-validation.md`, and links from the usage, local-environment and troubleshooting guides and the documentation index.
+
 - Render an engagement `scope-of-work.md` from the assessment folder as branded HTML, PDF and editable Word (optional `python-docx`), with `{{consultant}}`, `{{client}}`, inventory and confirmed-impact placeholders filled from the brand and `assessment.json`; incomplete evidence stops rendering, and the figures used are recorded in `branded-manifest.json`.
 
 - Write branded copies to `branded/<Brand>/` so one assessment can be delivered under several brands without overwriting.

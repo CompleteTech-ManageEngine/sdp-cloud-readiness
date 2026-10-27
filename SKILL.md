@@ -62,7 +62,7 @@ Branded copies are rendered from the run's own `assessment.json`, `findings.csv`
 
 ## Scope of Work
 
-When the operator wants a Scope of Work, it is written (or copied from a previous engagement) as `scope-of-work.md` in the client's assessment folder, never in this repository. Use the placeholders in [BRANDING.md](BRANDING.md#scope-of-work) for the consultant, client and every evidence figure instead of typing numbers, then run `--brand-assessment` for each required brand. Rendering stops on incomplete evidence; report that to the operator rather than editing figures by hand. Check `scope_of_work_figures` in `branded-manifest.json` and tell the operator which figures changed from any earlier version.
+When the operator wants a Scope of Work, it is written (or copied from a previous engagement) as `scope-of-work.md` in the client's assessment folder, never in this repository. Use the placeholders in [docs/guides/scope-of-work.md](docs/guides/scope-of-work.md) for the consultant, client and every evidence figure instead of typing numbers, then run `--brand-assessment` for each required brand. Rendering stops on incomplete evidence; report that to the operator rather than editing figures by hand. Check `scope_of_work_figures` in `branded-manifest.json` and tell the operator which figures changed from any earlier version.
 
 ## Workflow
 

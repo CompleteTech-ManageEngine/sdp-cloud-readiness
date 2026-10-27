@@ -45,6 +45,16 @@ SDP_GLOBAL_PORTAL_ID=
 
 Instance keys are never automatically reused for ESM global operations. A global key and its context must be supplied together. The directory key is used only for the existing bounded discovery-recovery attempt. All credentials still share the same request limiter and attempt/time budgets.
 
+## Branded copies
+
+```dotenv
+# Brand JSON path, preset name or none; blank = CompleteTech LLC preset.
+SDP_BRAND_FILE=
+SDP_PREPARED_FOR=
+```
+
+`SDP_PREPARED_FOR` names the client on every branded copy and in the file names. Leave `SDP_BRAND_FILE` blank for the CompleteTech LLC identity, set it to an approved brand file or preset name, or to `none` for unbranded reports only. `--brand` and `--prepared-for` override these values for one run. These settings hold no secrets and are never sent anywhere. See [branded deliverables](branded-deliverables.md).
+
 ## Precedence and conflicts
 
 1. Existing process environment variables win over file values, including an explicitly empty process variable. File values are available only for the duration of the command.

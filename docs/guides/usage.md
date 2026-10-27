@@ -4,9 +4,13 @@ For a short introduction, see the [repository README](../../README.md). Run all 
 
 A local, **read-only assessment of standard ManageEngine ServiceDesk Plus on-premises before migration to Cloud**. Normally, provide only the source URL and integration API key. Version **2.2.0** attempts to discover the portal/ESM topology visible to that key, assesses discovered portals within one shared request budget, and produces a consolidated report with per-portal findings and explicit coverage gaps.
 
-**Python 3.10 or newer. No third-party Python packages.** The source tree, portable `.pyz`, and Windows launcher run the same application. This is an independent assessment tool, not a ManageEngine product or a migration utility.
+**Python 3.10 or newer. No third-party Python packages for the assessment** (`openpyxl` and `python-docx` are optional, for the branded workbook and Word Scope of Work). The source tree, portable `.pyz`, and Windows launcher run the same application. This is an independent assessment tool, not a ManageEngine product or a migration utility.
 
 The main on-premises API catalog was reviewed on **7 October 2026**; directory discovery, pagination and error handling were rechecked on **14 October 2026**. Migration rules carry their own dated source references. API availability, effective permissions, and migration behavior still need validation against your installed build and proposed Cloud target.
+
+## Branded deliverables and Scope of Work
+
+Each run also writes client-ready copies to `<assessment>/branded/<Brand>/` with the CompleteTech LLC identity: the report and vendor questions as HTML and PDF, a findings and coverage workbook, and, when the folder holds an engagement `scope-of-work.md`, the Scope of Work as HTML, PDF and Word. Name the client with `--prepared-for "Client Name"`; choose another approved brand with `--brand`, or none with `--brand none`. `--brand-assessment <folder>` brands an existing assessment offline. The verified reports below are never modified. See [branded deliverables](branded-deliverables.md) and [Scope of Work](scope-of-work.md).
 
 ## Default local environment
 
@@ -442,6 +446,7 @@ Replace known values and leave unknown answers as `null`. Retention years, Power
 | `diagnostics.json` | Small sanitized discovery/connection summary, useful without opening HTML |
 | `report-manifest.json` | Expected report filenames, byte lengths, SHA-256 values, and point-in-time publication status |
 | Sibling `<run-directory>.zip` | Verified ZIP containing the six reports, diagnostics, and manifest; created only from explicit sanitized documents |
+| `branded/<Brand>/` | Presentation copies for the client (HTML, PDF, workbook, optional Scope of Work) and `branded-manifest.json`; not part of the verified set or ZIP. See [branded deliverables](branded-deliverables.md) |
 
 Existing report formats remain available. JSON schema **2.0** adds first-class environment/portal structures; flat findings and coverage retain portal identifiers so existing integrations can adapt without losing provenance. Consumers should read `schema_version`, use scope and portal ID with resource keys, and treat a blank/null unknown count differently from zero. Do not key findings only by their old single-portal rule ID or add the same global inventory once for each portal.
 

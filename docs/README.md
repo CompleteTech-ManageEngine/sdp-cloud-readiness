@@ -12,7 +12,9 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Resolve coverage gaps and retry finished instances](guides/coverage-recovery.md)
 - [Discovery and output troubleshooting](guides/troubleshooting.md)
 - [Windows API-key input](guides/windows-key-input.md)
-- [Branded client deliverables](../BRANDING.md)
+- [Branded client deliverables](guides/branded-deliverables.md)
+- [Scope of Work](guides/scope-of-work.md)
+- [Branding, palette and brand files](../BRANDING.md)
 - [Configuration examples](../examples/config/README.md)
 
 ## Technical reference
@@ -21,6 +23,12 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Topology and authorization research](reference/topology.md)
 - [Field discovery research](reference/fields.md)
 - [Diagnostics and coverage](reference/diagnostics-and-coverage.md)
+
+## Getting started
+
+- [Start here: onboarding](../ONBOARDING.md)
+- [Agent skill instructions](../SKILL.md)
+- [Repository README](../README.md)
 
 ## Development and releases
 
@@ -35,3 +43,4 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Multi-key authorization source review](reference/multi-key-authorization.md)
 - [2.2.0 validation evidence](development/multi-key-validation.md)
 - [Local environment validation](development/local-env-validation.md)
+- [Branded deliverables and Scope of Work validation](development/branding-validation.md)
