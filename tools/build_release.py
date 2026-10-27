@@ -19,7 +19,8 @@ import zipfile
 STAMP = (2026, 10, 14, 0, 0, 0)
 BASE_FILES = ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", ".env.example", "examples/config/connection.example.json", "examples/config/answers.example.json",
               "sdp_cloud_readiness.py", "__main__.py", "Run-Assessment.cmd", "Run-All-Portals.cmd", "examples/config/portals.example.json",
-              "examples/config/credentials.example.json")
+              "examples/config/credentials.example.json", "examples/config/brand.example.json",
+              "SKILL.md", "BRANDING.md", "agents/openai.yaml")
 PATTERNS = ("sdp_audit/*.py", "tests/*.py", "tests/fixtures/*.json", "tests/fixtures/*.md",
             "docs/*.md", "docs/*/*.md", "tools/*.py", "examples/config/*.md",
             "examples/synthetic-assessment/*", "examples/recovery-assessment/*")

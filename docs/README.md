@@ -12,6 +12,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Resolve coverage gaps and retry finished instances](guides/coverage-recovery.md)
 - [Discovery and output troubleshooting](guides/troubleshooting.md)
 - [Windows API-key input](guides/windows-key-input.md)
+- [Branded client deliverables](../BRANDING.md)
 - [Configuration examples](../examples/config/README.md)
 
 ## Technical reference

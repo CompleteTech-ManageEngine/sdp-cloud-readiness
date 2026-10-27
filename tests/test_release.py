@@ -211,6 +211,9 @@ class ReleaseTests(unittest.TestCase):
         runtime_paths = [self.stage / "__main__.py", self.stage / "sdp_cloud_readiness.py"]
         runtime_paths.extend(sorted((self.stage / "sdp_audit").glob("*.py")))
         allowed = set(sys.stdlib_module_names) | {"sdp_audit"}
+        # The branded workbook is optional: only this module may import openpyxl,
+        # and branded.py imports it behind an ImportError guard.
+        optional = {"branded_xlsx.py": {"openpyxl"}}
         # A module existing only in newer Python cannot satisfy the 3.10 floor.
         unavailable_in_310 = {"tomllib", "annotationlib", "compression", "_interpreters", "interpreters"}
         for path in runtime_paths:
@@ -223,8 +226,10 @@ class ReleaseTests(unittest.TestCase):
                     elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
                         imports = [node.module.split(".", 1)[0]]
                     for imported in imports:
-                        self.assertIn(imported, allowed, f"Non-standard runtime import {imported} in {path.name}")
+                        self.assertIn(imported, allowed | optional.get(path.name, set()), f"Non-standard runtime import {imported} in {path.name}")
                         self.assertNotIn(imported, unavailable_in_310)
+        guarded = (self.stage / "sdp_audit" / "branded.py").read_text(encoding="utf-8")
+        self.assertIn("from .branded_xlsx import write_evidence_workbook\n        except ImportError:", guarded)
 
 
     def test_portable_local_key_check_is_offline_and_secret_safe(self):

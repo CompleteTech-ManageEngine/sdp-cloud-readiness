@@ -36,6 +36,9 @@ def scaffold() -> str:
         "# In multi-key mode, leave both blank = Orguser coverage gap when applicable.\n"
         "# Context ID is administrator-verified, never a slot number. See credential guide.\n"
         "SDP_GLOBAL_API_KEY=\nSDP_GLOBAL_PORTAL_ID=\n"
+        "# OPTIONAL SDP_BRAND_FILE and SDP_PREPARED_FOR: branded copies after each run.\n"
+        "# Brand JSON lives outside this tool; blank = unbranded reports only.\n"
+        "SDP_BRAND_FILE=\nSDP_PREPARED_FOR=\n"
         "# Slot numbers are positions, NOT portal IDs. Add 21, 22, ... if needed.\n"
     )
     return header + "".join(

@@ -49,7 +49,9 @@ class LocalEnvTests(unittest.TestCase):
     def test_template_has_twenty_blank_pairs_and_separate_credentials(self):
         self.write(scaffold())
         values = parse_env(self.path)
-        self.assertEqual(len(values), 45)
+        self.assertEqual(len(values), 47)
+        self.assertIn("SDP_BRAND_FILE", values)
+        self.assertIn("SDP_PREPARED_FOR", values)
         self.assertTrue(all(value == "" for value in values.values()))
         for i in range(1, 21):
             self.assertIn(f"SDP_INSTANCE_{i:02d}_PORTAL_ID", values)

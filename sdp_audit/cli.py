@@ -24,6 +24,8 @@ from .resume import ResumableAssessment
 from .portal_scope import PortalScopeResolver, ScopeOptions
 from .models import Assessment, EnvironmentSnapshot
 from .progress import ProgressPrinter, print_environment_coverage
+from .branded import write_branded_pack
+from .branding import Brand, load_brand
 from .report import render_report_documents
 from .artifacts import Publication, atomic_write_bytes, failure_metadata, prepare_output, publish_documents
 from .diagnostics import diagnostics_document, print_topology_diagnostics
@@ -134,6 +136,11 @@ def _cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--demo", action="store_true", help="Run a synthetic multi-portal example with the actual read-only transport and mocked responses; no network or credentials")
     parser.add_argument("--demo-scenario", choices=("single", "multi", "recovery", "multi_key"), default="multi", help="Fixture used with --demo")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress lines; final result paths are still printed")
+    brand_group = parser.add_argument_group("branded copies", "Client-ready copies written to <assessment>/branded/. The brand file lives outside this tool (for example a branding skill's templates/branding.<name>.json); the verified unbranded reports are never modified.")
+    brand_group.add_argument("--brand", help="Brand JSON (company name, website, email, local logo, light palette). Default: SDP_BRAND_FILE from the environment or .env")
+    brand_group.add_argument("--prepared-for", help="Client name shown as 'Prepared for' and used in branded file names. Default: SDP_PREPARED_FOR")
+    brand_group.add_argument("--brand-assessment", metavar="DIR", help="Write branded copies for an existing assessment folder, then exit; no host, credentials or HTTP calls")
+    brand_group.add_argument("--no-pdf", action="store_true", help="Skip printing branded PDFs with the local Edge/Chrome")
     return parser
 
 
@@ -244,7 +251,31 @@ def _print_publication(receipt: Publication) -> bool:
     return receipt.complete
 
 
-def _finish_assessment(snapshot: EnvironmentSnapshot, output: Path, quiet: bool) -> int:
+def _brand(args: argparse.Namespace) -> Brand | None:
+    path = args.brand or os.environ.get("SDP_BRAND_FILE", "").strip()
+    prepared_for = args.prepared_for if args.prepared_for is not None else os.environ.get("SDP_PREPARED_FOR", "")
+    if not path:
+        if args.prepared_for or args.brand_assessment:
+            raise ValueError("Branded copies need a brand file: pass --brand or set SDP_BRAND_FILE.")
+        return None
+    try:
+        return load_brand(path, prepared_for)
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        raise ValueError("Brand file could not be read as UTF-8 JSON. Check the --brand or SDP_BRAND_FILE path.") from None
+
+
+def _write_branded(output: Path, brand: Brand, pdf: bool) -> bool:
+    try:
+        write_branded_pack(output, brand, pdf=pdf)
+        return True
+    except (ValueError, OSError) as error:
+        detail = str(error) if isinstance(error, ValueError) else failure_metadata(error, "branded-copy", "write")["classification"]
+        print("Branded copies were not written: " + str(detail) + " The unbranded reports are unaffected.", file=sys.stderr)
+        return False
+
+
+def _finish_assessment(snapshot: EnvironmentSnapshot, output: Path, quiet: bool,
+                       brand: Brand | None = None, pdf: bool = True) -> int:
     # Diagnostics must be visible without relying on a file the user cannot
     # locate. This also runs with --quiet and before analysis/report rendering.
     print_topology_diagnostics(snapshot)
@@ -282,6 +313,8 @@ def _finish_assessment(snapshot: EnvironmentSnapshot, output: Path, quiet: bool)
     print_environment_coverage(snapshot)
     if not _print_publication(receipt):
         return 1
+    if brand is not None and snapshot.portals:
+        _write_branded(output, brand, pdf)
     # 0 means documents were verified, never that Cloud migration is safe.
     return 2 if snapshot.interrupted_reason else 0
 
@@ -332,6 +365,7 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
         return 0
     snapshot: EnvironmentSnapshot | None = None
     output: Path | None = None
+    brand: Brand | None = None
     try:
         if not args.quiet:
             print("ServiceDesk Plus Cloud Readiness v" + __version__, flush=True)
@@ -347,6 +381,10 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             started = datetime.now(timezone.utc)
             output = Path(args.output_dir).expanduser().resolve() / ("output-check-" + started.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6])
             return _check_output(output)
+        brand = None if args.check_key_input or args.check_output else _brand(args)
+        if args.brand_assessment:
+            assert brand is not None
+            return 0 if _write_branded(Path(args.brand_assessment), brand, not args.no_pdf) else 1
         if args.check_key_input:
             key = acquire_api_key(args.key_input, args.api_key_env)
             del key
@@ -499,7 +537,7 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
                 print("Verified instance-boundary checkpoint: " + str(output / "checkpoint.json"), flush=True)
             else:
                 collector.collect(snapshot, None if args.all_portals else settings.get("portal_ids") or None)
-        return _finish_assessment(snapshot, output, args.quiet)
+        return _finish_assessment(snapshot, output, args.quiet, brand, not args.no_pdf)
     except (ValueError, OSError, ApiError, json.JSONDecodeError) as error:
         if isinstance(error, ApiError):
             print("Assessment could not start: " + error.kind + ". No credentials or response bodies were saved.", file=sys.stderr)
@@ -521,7 +559,7 @@ def _run(args: argparse.Namespace, *, file_host: str | None = None) -> int:
             snapshot.interrupted_reason = "Interrupted by user; collected evidence was preserved."
             snapshot.stats["stop_classification"] = "INTERRUPTED"
             try:
-                return _finish_assessment(snapshot, output, args.quiet)
+                return _finish_assessment(snapshot, output, args.quiet, brand, not args.no_pdf)
             except KeyboardInterrupt:
                 print("Report writing cancelled by a second interrupt.", file=sys.stderr)
                 return 130
