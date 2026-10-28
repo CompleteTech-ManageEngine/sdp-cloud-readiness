@@ -64,6 +64,10 @@ Branded copies are rendered from the run's own `assessment.json`, `findings.csv`
 
 When the operator wants a Scope of Work, it is written (or copied from a previous engagement) as `scope-of-work.md` in the client's assessment folder, never in this repository. Use the placeholders in [docs/guides/scope-of-work.md](docs/guides/scope-of-work.md) for the consultant, client and every evidence figure instead of typing numbers, then run `--brand-assessment` for each required brand. Rendering stops on incomplete evidence; report that to the operator rather than editing figures by hand. Check `scope_of_work_figures` in `branded-manifest.json` and tell the operator which figures changed from any earlier version.
 
+## Effort estimate
+
+When the operator needs an effort estimate, write or copy `effort-estimate.json` into the client's assessment folder next to `scope-of-work.md` ([docs/guides/effort-estimate.md](docs/guides/effort-estimate.md)). Use evidence drivers for every quantity the assessment supplies; use a numeric quantity only for what it cannot (interfaces, custom reports) and say why in `basis`. Treat hours per unit as the operator's decision: propose them as a labelled draft, never as fact. Report the expected, contingency, P80 and P90 hours from `branded-manifest.json`, and point the operator to the workbook to adjust task times.
+
 ## Workflow
 
 1. Confirm the goal: demo, live assessment, resume, or branding an existing folder. Relay Before you start for a live run.

@@ -12,6 +12,8 @@ identities can coexist) from the assessment's own ``assessment.json``,
   questions and the Scope of Work, with the brand in the header and footer
 * ``<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html``, ``.pdf``, ``.docx`` and ``.md``
   when the assessment folder holds an engagement ``scope-of-work.md``
+* ``<Client>-Effort-Estimate.xlsx`` (editable PERT workbook) and ``.html``,
+  ``.pdf``, ``.docx``, ``.md`` when it holds an ``effort-estimate.json``
 * ``branded-manifest.json`` with SHA-256 hashes of sources and outputs
 
 HTML needs only the standard library. PDFs are printed from the branded HTML by
@@ -37,7 +39,8 @@ from . import __version__
 from .artifacts import atomic_write_bytes
 from .branding import Brand, markdown_header, slug
 from .report import render_branded_questions_html, render_branded_report_html
-from .scope_of_work import Figures, document_title, parse, render_html as render_scope_html
+from .effort_estimate import ESTIMATE, load_estimate, markdown as estimate_markdown
+from .scope_of_work import Figures, document_title, parse, render_document_html, render_html as render_scope_html
 
 SCOPE_OF_WORK = "scope-of-work.md"
 
@@ -118,6 +121,15 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         scope_figures = figures.used
         pages[f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work.html"] = render_scope_html(parse(scope_text), brand)
         documents.append((f"{stem}-ServiceDesk-Plus-Cloud-Scope-of-Work", "Scope of Work", scope_text))
+    estimate_source = folder / ESTIMATE
+    estimate = None
+    if estimate_source.is_file():
+        estimate = load_estimate(estimate_source, data, brand)
+        estimate_text = estimate_markdown(estimate, brand, data)
+        pages[f"{stem}-Effort-Estimate.html"] = render_document_html(
+            parse(estimate_text), brand, "Effort Estimate",
+            "PERT effort estimate derived from the assessment evidence; the companion workbook recalculates every figure.")
+        documents.append((f"{stem}-Effort-Estimate", "Effort Estimate", estimate_text))
     for name, text in pages.items():
         atomic_write_bytes(output / name, text.encode("utf-8"))
         written[name] = output / name
@@ -150,6 +162,17 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
             write_docx(blocks, brand, document_title(blocks, doc_type), doc_type, target)
             written[target.name] = target
 
+    if estimate is not None:
+        try:
+            from .estimate_xlsx import write_estimate_workbook
+        except ImportError:
+            skipped.append("Effort estimate workbook: install openpyxl to add the editable PERT workbook")
+        else:
+            target = output / f"{stem}-Effort-Estimate.xlsx"
+            baseline = f"PERT effort estimate · assessment of {data.get('generated_at', '')[:10]}"
+            write_estimate_workbook(estimate, brand, target, baseline)
+            written[target.name] = target
+
     findings, coverage = folder / "findings.csv", folder / "coverage.csv"
     if findings.is_file() and coverage.is_file():
         try:
@@ -164,7 +187,7 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         skipped.append("Workbook: findings.csv or coverage.csv is missing")
 
     sources = [path for path in (source, findings, coverage, folder / "vendor-questions.md",
-                                 folder / "report-manifest.json", scope_source) if path.is_file()]
+                                 folder / "report-manifest.json", scope_source, estimate_source) if path.is_file()]
     manifest = {
         "tool_version": __version__,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -177,6 +200,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
     }
     if scope_figures:
         manifest["scope_of_work_figures"] = scope_figures
+    if estimate is not None:
+        manifest["effort_estimate_hours"] = {key: round(value, 1) for key, value in estimate.totals().items()}
     atomic_write_bytes(output / "branded-manifest.json", (json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
     written["branded-manifest.json"] = output / "branded-manifest.json"
     log("Branded copies (" + brand.name + (", prepared for " + brand.prepared_for if brand.prepared_for else "") + "):")

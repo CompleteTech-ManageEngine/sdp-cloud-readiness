@@ -14,6 +14,7 @@ Run commands from the repository root or the root of an extracted release, rathe
 - [Windows API-key input](guides/windows-key-input.md)
 - [Branded client deliverables](guides/branded-deliverables.md)
 - [Scope of Work](guides/scope-of-work.md)
+- [Effort estimate (PERT)](guides/effort-estimate.md)
 - [Branding, palette and brand files](../BRANDING.md)
 - [Configuration examples](../examples/config/README.md)
 
