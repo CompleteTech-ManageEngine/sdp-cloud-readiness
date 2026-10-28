@@ -130,8 +130,9 @@ def render_html(blocks: list[tuple[str, Any]], brand: Brand) -> str:
                                 "from the assessment's assessment.json; see branded-manifest.json.")
 
 
-def render_document_html(blocks: list[tuple[str, Any]], brand: Brand, doc_type: str, footer: str) -> str:
-    """Branded, offline HTML page for any parsed Markdown document."""
+def render_document_html(blocks: list[tuple[str, Any]], brand: Brand, doc_type: str, footer: str,
+                         product: str = "ServiceDesk Plus") -> str:
+    """Branded, offline HTML page for any parsed Markdown document; `product` names the subject in the masthead."""
     from .report import _STYLE, _apply_brand
     title = document_title(blocks, doc_type)
     document = (
@@ -153,4 +154,5 @@ def render_document_html(blocks: list[tuple[str, Any]], brand: Brand, doc_type: 
         f"<footer>{html.escape(footer)}</footer>"
         "</main></body></html>\n"
     )
-    return _apply_brand(document, brand, title + " · " + doc_type, doc_type)
+    reference = " · ".join(part for part in (product, brand.prepared_for) if part)
+    return _apply_brand(document, brand, title + " · " + doc_type, doc_type, reference=reference)

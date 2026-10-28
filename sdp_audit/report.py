@@ -1044,7 +1044,8 @@ def _brand_reference(brand: Brand) -> str:
     return "ServiceDesk Plus · " + brand.prepared_for if brand.prepared_for else "ServiceDesk Plus"
 
 
-def _apply_brand(document: str, brand: Brand, title: str, doc_type: str, gutter: int = 40) -> str:
+def _apply_brand(document: str, brand: Brand, title: str, doc_type: str, gutter: int = 40,
+                 reference: str | None = None) -> str:
     """Add an operator brand to a finished offline report without changing its content.
 
     The CSP is widened only to data: images so the embedded logo can render;
@@ -1056,7 +1057,7 @@ def _apply_brand(document: str, brand: Brand, title: str, doc_type: str, gutter:
     document = re.sub(r"<title>.*?</title>", lambda _: "<title>" + _h(html_title(brand, title)) + "</title>", document, count=1)
     head, _, tail = document.partition("</style>")
     document = head + html_css(brand, gutter) + "</style>" + tail
-    document = document.replace("<body><main>", "<body><main>" + html_masthead(brand, doc_type, _brand_reference(brand)), 1)
+    document = document.replace("<body><main>", "<body><main>" + html_masthead(brand, doc_type, reference or _brand_reference(brand)), 1)
     if brand.logo:
         document = document.replace("No external scripts, styles, images or analytics are loaded.",
                                     "No external scripts, styles, images or analytics are loaded (the logo is embedded).", 1)
