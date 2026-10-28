@@ -57,13 +57,13 @@ Each run produces the estimate twice, from the same `effort-estimate.json`, so t
 
 | Document | For | Content |
 | --- | --- | --- |
-| `<Client>-Effort-Estimate` | The client | Plain scope, whole hours with ranges, subtotals, confidence levels, assumptions and exclusions |
+| `<Client>-Effort-Estimate` | The client | Plain scope, whole estimated hours, subtotals, confidence levels, assumptions and exclusions |
 | `<Client>-Effort-Estimate-Detailed` | Internal review | The full PERT table: quantity driver and quantity, optimistic / most likely / pessimistic hours per unit, expected hours and standard deviation per task and deliverable, the formulas |
 | `<Client>-Effort-Estimate.xlsx` | Adjusting the estimate | The same table with live formulas and input cells |
 
 Both documents come as HTML, PDF, Word and Markdown. Send the client-ready one; keep the detailed one for review and approval.
 
-The client-ready document is written for the client: plain scope ("417 templates", "12 portals"), whole hours with a range per task, deliverable subtotals that add up to the totals, the confidence levels and a short explanation of the method. Per-unit hours, drivers and standard deviations stay in the workbook, which is the working tool for adjusting the estimate. Write `task` names and `basis` notes in client language, because they appear in the document as written.
+The client-ready document is written for the client: plain scope ("417 templates", "12 portals"), whole estimated hours per task, deliverable subtotals that add up to the totals, the confidence levels and a short explanation of the method. Per-unit hours, drivers and standard deviations stay in the workbook, which is the working tool for adjusting the estimate. Write `task` names and `basis` notes in client language, because they appear in the document as written.
 
 ## Adjust in the workbook
 
