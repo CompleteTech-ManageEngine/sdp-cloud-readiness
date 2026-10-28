@@ -147,7 +147,7 @@ def render_document_html(blocks: list[tuple[str, Any]], brand: Brand, doc_type: 
         "code{font-family:Consolas,'Courier New',monospace;font-size:.9em;background:var(--surface);padding:0 3px;border-radius:3px;}"
         "pre{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:12px;overflow-x:auto;white-space:pre;}"
         "pre code{background:none;padding:0;}"
-        "@media print{.page-break{break-after:page;}h2,h3{break-after:avoid;}table{font-size:9pt;}pre{white-space:pre-wrap;}}</style>"
+        "@media print{.page-break{break-after:page;}h2,h3{break-after:avoid;}table{font-size:9pt;}td,th{padding:5px 8px;line-height:1.35;}.table-scroll{break-inside:avoid;}pre{white-space:pre-wrap;}}</style>"
         "</head><body><main>"
         f"{body_html(blocks)}"
         f"<footer>{html.escape(footer)}</footer>"

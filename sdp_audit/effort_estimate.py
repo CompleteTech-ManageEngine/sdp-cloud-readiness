@@ -180,7 +180,8 @@ def rounded_parts(values: list[float], total: int) -> list[int]:
 
 
 def _range(low: float, high: float) -> str:
-    return f"{_whole(low)}–{_whole(high)}"
+    # Word joiners keep "24–144" on one line in narrow table cells.
+    return f"{_whole(low)}\u2060\u2013\u2060{_whole(high)}"
 
 
 def markdown(estimate: Estimate, brand: Brand, data: Mapping[str, Any]) -> str:
