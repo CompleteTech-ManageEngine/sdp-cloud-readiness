@@ -87,13 +87,33 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+HASHES = ".branded-hashes.json"
+
+
 def _previous_outputs(output: Path) -> dict[str, str]:
-    """Output hashes recorded by the previous run in this brand folder, to recognise edited deliverables."""
+    """Hashes of the files this tool last wrote in the brand folder, to recognise deliverables edited since.
+
+    The sidecar is updated after every file, so an interrupted run never makes the tool's own output look edited.
+    Older folders without it fall back to the last manifest.
+    """
+    hashes: dict[str, str] = {}
     try:
         manifest = json.loads((output / "branded-manifest.json").read_text(encoding="utf-8"))
-        return {item["name"]: item["sha256"] for item in manifest.get("outputs", [])}
+        hashes.update({item["name"]: item["sha256"] for item in manifest.get("outputs", [])})
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        return {}
+        pass
+    try:
+        sidecar = json.loads((output / HASHES).read_text(encoding="utf-8"))
+        if isinstance(sidecar, dict):
+            hashes.update({str(k): str(v) for k, v in sidecar.items()})
+    except (OSError, ValueError):
+        pass
+    return hashes
+
+
+def _record_output(output: Path, hashes: dict[str, str], target: Path) -> None:
+    hashes[target.name] = _sha256(target)
+    atomic_write_bytes(output / HASHES, (json.dumps(hashes, indent=1, sort_keys=True) + "\n").encode("utf-8"))
 
 
 def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = True,
@@ -167,6 +187,7 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
             skipped.append(f"{target.name}: could not be replaced (is it open in another program?); close it and run again")
             return None
         written[target.name] = target
+        _record_output(output, previous, target)
         return target
 
     html_paths = {name: attempt(name, lambda t, text=text: atomic_write_bytes(t, text.encode("utf-8")))

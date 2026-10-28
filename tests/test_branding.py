@@ -213,3 +213,17 @@ class RerunSafetyTests(unittest.TestCase):
         self.assertTrue(any("Client-Vendor-Questions.html" in note and "open in another program" in note
                             for note in manifest["skipped"]))
         self.assertFalse(list(self.out.glob("*.partial*")))
+
+    def test_interrupted_run_does_not_make_own_files_look_edited(self):
+        write_branded_pack(self.folder, self.brand, pdf=False, log=lambda _: None)
+        with unittest.mock.patch("sdp_audit.branded.markdown_header", side_effect=RuntimeError("interrupted")):
+            # New evidence changes the HTML, which is rewritten before the run stops; no manifest is written for it.
+            data = json.loads((self.folder / "assessment.json").read_text(encoding="utf-8"))
+            data["generated_at"] = "2026-10-08T12:00:00+00:00"
+            (self.folder / "assessment.json").write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaises(RuntimeError):
+                write_branded_pack(self.folder, self.brand, pdf=False, log=lambda _: None)
+        write_branded_pack(self.folder, self.brand, pdf=False, log=lambda _: None)
+        manifest = json.loads((self.out / "branded-manifest.json").read_text(encoding="utf-8"))
+        self.assertNotIn("preserved_edits", manifest)
+        self.assertFalse(list(self.out.glob("*.regenerated.*")))
