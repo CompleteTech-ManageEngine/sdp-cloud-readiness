@@ -67,7 +67,7 @@ class EffortEstimateTests(unittest.TestCase):
         self.assertIn(f"| **Total estimate** | **{totals['with_contingency']:,.0f}** |", text)
         self.assertIn("Indicative cost", text)
         self.assertIn(f"| Per portal | {portals} portals |", text)
-        self.assertIn("| Manual | 4 (allowance) | 4 | 4–4 | Not in evidence |", text)
+        self.assertIn("| Manual | 4 (allowance) | 4 | 4\u2060\u2013\u20604 | Not in evidence |", text)
 
     def test_client_document_hides_working_detail(self):
         text = markdown(self.load(ESTIMATE), self.brand, self.data)
