@@ -179,11 +179,6 @@ def rounded_parts(values: list[float], total: int) -> list[int]:
     return floors
 
 
-def _range(low: float, high: float) -> str:
-    # Word joiners keep "24–144" on one line in narrow table cells.
-    return f"{_whole(low)}\u2060\u2013\u2060{_whole(high)}"
-
-
 def markdown(estimate: Estimate, brand: Brand, data: Mapping[str, Any]) -> str:
     """Client-facing estimate document. The workbook carries the three-point inputs for adjustment."""
     totals = estimate.totals()
@@ -200,22 +195,19 @@ def markdown(estimate: Estimate, brand: Brand, data: Mapping[str, Any]) -> str:
              "## Summary", "",
              f"We estimate the delivery described in the Scope of Work at **{_whole(totals['with_contingency'])} hours**, "
              f"including {contingency} contingency on an expected effort of {_whole(totals['expected'])} hours. "
-             f"Allowing for the range of every task, there is an 80% likelihood that the work is completed within "
+             f"Allowing for the uncertainty in every task, there is an 80% likelihood that the work is completed within "
              f"{_whole(totals['p80'])} hours and a 90% likelihood within {_whole(totals['p90'])} hours; the total estimate "
              f"is {position}.", "",
-             "| Deliverable | Estimated hours | Range |", "| --- | --- | --- |"]
+             "| Deliverable | Estimated hours |", "| --- | --- |"]
     # Displayed figures add up: deliverables to the total, tasks to their deliverable, contingency to the estimate.
     groups = [(code, name, estimate.group(code)) for code, name in estimate.deliverables.items() if estimate.group(code)]
     expected_total = round(totals["expected"])
     shown = dict(zip((code for code, _, _ in groups),
                      rounded_parts([sum(t.expected for t in group) for _, _, group in groups], expected_total)))
     for code, name, group in groups:
-        lines.append(f"| {code} {name} | {_whole(shown[code])} | "
-                     f"{_range(sum(t.quantity * t.optimistic for t in group), sum(t.quantity * t.pessimistic for t in group))} |")
+        lines.append(f"| {code} {name} | {_whole(shown[code])} |")
     estimate_total = round(totals["with_contingency"])
-    lines += [f"| **Total** | **{_whole(expected_total)}** | |", "",
-              "Ranges are not added together: it is very unlikely that every task reaches its optimistic or pessimistic "
-              "estimate at the same time. The confidence levels below give the realistic spread for the whole delivery.", "",
+    lines += [f"| **Total** | **{_whole(expected_total)}** |", "",
               "| Estimate | Hours |", "| --- | --- |",
               f"| Expected effort | {_whole(expected_total)} |",
               f"| Contingency ({contingency}) | {_whole(estimate_total - expected_total)} |",
@@ -228,15 +220,14 @@ def markdown(estimate: Estimate, brand: Brand, data: Mapping[str, Any]) -> str:
               "Each task is sized from the scope measured in the assessment, such as the number of portals, templates and "
               "query reports, or as a fixed allowance where the scope is confirmed during design. Every task has an optimistic, "
               "a most likely and a pessimistic estimate. These are combined with the PERT (three-point) method, which weights the "
-              "most likely value and reflects the uncertainty in each range. Each range runs from the optimistic to the "
-              "pessimistic estimate; the confidence levels show the total effort that is unlikely to be exceeded.", "",
+              "most likely value and reflects the uncertainty in each task. The confidence levels show the total effort that "
+              "is unlikely to be exceeded.", "",
               "<!-- pagebreak -->", "", "## Estimate by deliverable", ""]
     for code, name, group in groups:
         task_hours = rounded_parts([t.expected for t in group], shown[code])
-        lines += [f"### {code} {name}", "", "| Task | Scope | Estimated hours | Range | Notes |", "| --- | --- | --- | --- | --- |"]
-        lines += [f"| {t.task} | {scope_label(t)} | {_whole(hours)} | {_range(t.quantity * t.optimistic, t.quantity * t.pessimistic)} | "
-                  f"{t.basis} |" for t, hours in zip(group, task_hours)]
-        lines += [f"| **Subtotal** | | **{_whole(shown[code])}** | | |", ""]
+        lines += [f"### {code} {name}", "", "| Task | Scope | Estimated hours | Notes |", "| --- | --- | --- | --- |"]
+        lines += [f"| {t.task} | {scope_label(t)} | {_whole(hours)} | {t.basis} |" for t, hours in zip(group, task_hours)]
+        lines += [f"| **Subtotal** | | **{_whole(shown[code])}** | |", ""]
     if estimate.assumptions:
         lines += ["## Assumptions", ""] + [f"- {a}" for a in estimate.assumptions] + [""]
     if estimate.exclusions:

@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Remove the range column from the client-ready effort estimate; ranges remain in the detailed working estimate and the workbook.
+
 - Produce the effort estimate as two documents from one source: the client-ready `<Client>-Effort-Estimate` and the full PERT working table `<Client>-Effort-Estimate-Detailed` (per-unit hours, drivers, standard deviations), both as HTML, PDF, Word and Markdown.
 
 - Make the effort estimate document client-facing: plain scope, whole hours with ranges, subtotals that add up to the totals, the total placed against the confidence levels, and a plain-language method; working detail (per-unit hours, drivers, deviations) stays in the workbook.
