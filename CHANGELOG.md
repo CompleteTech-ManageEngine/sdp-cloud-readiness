@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Add a PERT effort estimate: an engagement `effort-estimate.json` (deliverables, tasks, evidence quantity drivers, optimistic / most likely / pessimistic hours per unit) renders as an editable branded workbook with live formulas (task totals, deliverable summaries, standard deviation, contingency, P80/P90, optional rate) and as HTML, PDF, Word and Markdown. New guide `docs/guides/effort-estimate.md`.
+
 - Add Word (`.docx`) and Markdown copies of the branded report and vendor questions alongside HTML and PDF, and a Markdown copy of the Scope of Work; every branded document now comes in the same four formats from one shared Markdown reader. Large tables are written directly so a full assessment converts in seconds.
 - Add `tools/build_docs.py` to render the repository documentation as branded HTML, PDF and Word, with a combined handbook and contents page.
 

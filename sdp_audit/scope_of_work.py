@@ -93,7 +93,19 @@ class Figures:
             return _number(sum(int(f.get("affected_count") or 0) for f in self._impacts(arg)))
         if name == "impact_portals" and arg:
             return _join(list(dict.fromkeys(str(f.get("portal_id")) for f in self._impacts(arg))))
+        if name == "impact_portal_count" and arg:
+            return _number(len({str(f.get("portal_id")) for f in self._impacts(arg)}))
         raise ValueError(f"Unknown Scope of Work placeholder: {{{{{name}{':' + arg if arg else ''}}}}}")
+
+    def quantity(self, driver: str) -> int:
+        """Numeric evidence quantity for an estimate driver: fixed, portal_count, inventory_total:K,
+        impact_total:RULE or impact_portal_count:RULE."""
+        if driver == "fixed":
+            return 1
+        name, _, arg = driver.partition(":")
+        if name not in {"portal_count", "inventory_total", "impact_total", "impact_portal_count"}:
+            raise ValueError(f"Unknown estimate driver: {driver}")
+        return int(self.value(name, arg or None).replace(",", ""))
 
     def inventory_table(self) -> str:
         columns = [dict(self._coverage(key)) for key, _ in INVENTORY]

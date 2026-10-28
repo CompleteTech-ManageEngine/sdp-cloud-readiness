@@ -63,6 +63,7 @@ flowchart LR
 | Credentials | One key across portals, separate keys per instance (`--multi-key`, `--credential-file`, numbered `.env` slots), and separate directory and global credentials. Keys are never printed, saved or written to reports. |
 | Long assessments | Budgets on requests and time; `--checkpoint` saves sanitized progress at instance boundaries and `--resume` continues or retries selected instances. |
 | Reports | Offline HTML, Markdown, JSON and CSV, a vendor-questions document, sanitized diagnostics, a hash manifest and a verified ZIP. |
+| Effort estimate | An engagement `effort-estimate.json` produces a PERT estimate per Scope of Work deliverable, with quantities from the evidence, as an editable Excel workbook (live formulas, contingency, P80/P90) and as HTML, PDF, Word and Markdown. |
 | Scope of Work | An engagement `scope-of-work.md` in the assessment folder renders as branded HTML, PDF and editable Word, with names and evidence figures filled from placeholders. |
 | Branded deliverables | CompleteTech-branded report and vendor questions (HTML and PDF) and a findings and coverage Excel workbook on every run; an approved engagement brand or `--brand none` on request. |
 
@@ -109,7 +110,7 @@ For repeated runs, fill the local `.env` beside the entry point. A first normal 
 | `vendor-questions.md` | Answers and open questions for ManageEngine, owners and the project |
 | `diagnostics.json` | Sanitized discovery and request diagnostics |
 | `report-manifest.json` and the folder ZIP | SHA-256 manifest and a read-back-verified archive |
-| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment` and `<Client>-Vendor-Questions` as `.html/.pdf/.docx/.md`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx/.md` (with `scope-of-work.md`), `branded-manifest.json` |
+| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment` and `<Client>-Vendor-Questions` as `.html/.pdf/.docx/.md`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx/.md` (with `scope-of-work.md`), `<Client>-Effort-Estimate.xlsx/.html/.pdf/.docx/.md` (with `effort-estimate.json`), `branded-manifest.json` |
 
 Exit code `0` means the reports were written and verified, not that migration is safe; `2` means the assessment is incomplete or was stopped; `1` is a startup or local output error.
 
@@ -142,7 +143,7 @@ Deliverables carry the CompleteTech LLC identity from the `completetech` preset 
 | `tools/` | Release tooling |
 | `dist/` | Generated portable app, release ZIP and checksums; ignored by Git |
 
-Further reading: [full usage guide](docs/guides/usage.md), [assess all portals](docs/guides/all-portals.md), [multiple credentials](docs/guides/multiple-credentials.md), [resume](docs/guides/resume.md), [coverage recovery](docs/guides/coverage-recovery.md), [branded deliverables](docs/guides/branded-deliverables.md), [Scope of Work](docs/guides/scope-of-work.md), [troubleshooting](docs/guides/troubleshooting.md), [Windows key input](docs/guides/windows-key-input.md) and the [documentation index](docs/README.md).
+Further reading: [full usage guide](docs/guides/usage.md), [assess all portals](docs/guides/all-portals.md), [multiple credentials](docs/guides/multiple-credentials.md), [resume](docs/guides/resume.md), [coverage recovery](docs/guides/coverage-recovery.md), [branded deliverables](docs/guides/branded-deliverables.md), [Scope of Work](docs/guides/scope-of-work.md), [effort estimate](docs/guides/effort-estimate.md), [troubleshooting](docs/guides/troubleshooting.md), [Windows key input](docs/guides/windows-key-input.md) and the [documentation index](docs/README.md).
 
 ## Printable Documentation
 

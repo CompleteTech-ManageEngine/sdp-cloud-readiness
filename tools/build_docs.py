@@ -31,6 +31,7 @@ HANDBOOK = [
     "README.md", "ONBOARDING.md", "docs/guides/usage.md", "docs/guides/local-env.md",
     "docs/guides/all-portals.md", "docs/guides/multiple-credentials.md", "docs/guides/resume.md",
     "docs/guides/coverage-recovery.md", "docs/guides/branded-deliverables.md", "docs/guides/scope-of-work.md",
+    "docs/guides/effort-estimate.md",
     "docs/guides/troubleshooting.md", "docs/guides/windows-key-input.md", "BRANDING.md", "BRAND_ASSETS.md",
 ]
 EXTRA = ["SKILL.md", "CONTRIBUTING.md", "CHANGELOG.md", "examples/config/README.md"]
