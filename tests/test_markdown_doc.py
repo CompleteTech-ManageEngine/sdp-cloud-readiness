@@ -99,3 +99,14 @@ class WordWriterTests(unittest.TestCase):
             self.assertIn("12 | 13", text)
             self.assertIn("python .\\tool.py --demo", text)
             self.assertEqual(document.core_properties.author, "Fictional Advisory")
+
+
+class DocumentMastheadTests(unittest.TestCase):
+    def test_product_name_in_masthead(self):
+        from sdp_audit.scope_of_work import render_document_html
+        brand = Brand(name="Fictional Advisory", prepared_for="Client")
+        blocks = parse("# Plan\n\nText.")
+        self.assertIn("ServiceDesk Plus · Client", render_document_html(blocks, brand, "Plan", "Footer."))
+        page = render_document_html(blocks, brand, "Plan", "Footer.", product="Zoho One")
+        self.assertIn("Zoho One · Client", page)
+        self.assertNotIn("ServiceDesk Plus", page)
