@@ -169,3 +169,47 @@ class PresetTests(unittest.TestCase):
             with unittest.mock.patch.object(cli, "_default_brand", cli.DEFAULT_BRAND):
                 self.assertEqual(cli._brand(args).name, expected)
                 self.assertIsNone(cli._brand(argparse.Namespace(brand="none", prepared_for=None, brand_assessment=None)))
+
+
+class RerunSafetyTests(unittest.TestCase):
+    """Re-running must not destroy a deliverable the consultant edited, nor stop on a file open in Word/Excel."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.folder = Path(temp.name)
+        for name, text in render_report_documents(analyze_environment(demo_environment("multi"))).items():
+            (self.folder / name).write_text(text, encoding="utf-8")
+        from sdp_audit.branding import Brand
+        self.brand = Brand(name="Fictional Advisory", prepared_for="Client")
+        self.out = self.folder / "branded" / "Fictional-Advisory"
+
+    def test_edited_deliverable_is_kept_and_new_version_written_beside_it(self):
+        write_branded_pack(self.folder, self.brand, pdf=False, log=lambda _: None)
+        edited = self.out / "Client-Vendor-Questions.md"
+        edited.write_text("consultant edits", encoding="utf-8")
+        written = write_branded_pack(self.folder, self.brand, pdf=False, log=lambda _: None)
+        self.assertEqual(edited.read_text(encoding="utf-8"), "consultant edits")
+        self.assertIn("Client-Vendor-Questions.regenerated.md", written)
+        manifest = json.loads((self.out / "branded-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["preserved_edits"], ["Client-Vendor-Questions.md"])
+        unchanged = (self.out / "Client-Cloud-Readiness-Assessment.md").read_text(encoding="utf-8")
+        self.assertTrue(unchanged.startswith("**Fictional Advisory**"))
+
+    def test_locked_file_is_skipped_and_the_rest_is_written(self):
+        from sdp_audit import artifacts
+        original = artifacts.atomic_write_bytes
+
+        def locked(destination, contents):
+            if destination.name == "Client-Vendor-Questions.html":
+                raise PermissionError(13, "in use")
+            return original(destination, contents)
+
+        with unittest.mock.patch("sdp_audit.branded.atomic_write_bytes", side_effect=locked):
+            written = write_branded_pack(self.folder, self.brand, pdf=False, log=lambda _: None)
+        self.assertNotIn("Client-Vendor-Questions.html", written)
+        self.assertIn("Client-Cloud-Readiness-Assessment.html", written)
+        manifest = json.loads((self.out / "branded-manifest.json").read_text(encoding="utf-8"))
+        self.assertTrue(any("Client-Vendor-Questions.html" in note and "open in another program" in note
+                            for note in manifest["skipped"]))
+        self.assertFalse(list(self.out.glob("*.partial*")))

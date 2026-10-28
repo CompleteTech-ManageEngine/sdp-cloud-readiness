@@ -40,7 +40,12 @@ Branded copies can be produced at any time from a finished assessment folder, wi
 python .\sdp_cloud_readiness.py --prepared-for "Client Name" --brand-assessment .\sdp-assessments\assessment-YYYYMMDD-HHMMSS-xxxxxx
 ```
 
-Run it once per brand to deliver the same evidence under several identities; each brand gets its own folder. Re-running for the same brand replaces that brand's files, which is how you refresh deliverables after editing `scope-of-work.md` or upgrading the tool.
+Run it once per brand to deliver the same evidence under several identities; each brand gets its own folder. Re-running for the same brand refreshes its files, which is how you update deliverables after editing `scope-of-work.md` or `effort-estimate.json`, or after upgrading the tool.
+
+Re-running never destroys your own work:
+
+- **Edited deliverables are kept.** If you changed a branded file after it was generated (for example edited the Word Scope of Work or adjusted the estimate workbook), the new version is written beside it as `….regenerated.docx` / `.xlsx` / … and your copy is left untouched. The console and `branded-manifest.json` (`preserved_edits`) list these files. Merge what you need, then delete or rename the one you no longer want.
+- **Open files are skipped.** A file open in Word or Excel cannot be replaced; it is listed under `skipped` and every other file is still written. Close it and run again.
 
 ## Before you send anything
 
@@ -69,6 +74,8 @@ PDFs are printed from the branded HTML by a locally installed Microsoft Edge or 
 
 | Message | Meaning and fix |
 | --- | --- |
+| `Skipped …: could not be replaced (is it open in another program?)` | Close the file in Word, Excel or the PDF viewer and run `--brand-assessment` again. |
+| `Kept your edited …; the new version is beside it as .regenerated` | You changed that file since it was generated. Compare it with the `.regenerated` copy and keep the one you want. |
 | `Branded copies need a brand file` | `--prepared-for` or `--brand-assessment` was used with branding disabled. Remove `--brand none` / `SDP_BRAND_FILE=none`, or pass `--brand`. |
 | `Brand file or preset not found` | The `--brand` path or preset name does not exist. Check the path, or list `templates\`. |
 | `Default branding preset not found beside the app` | A portable `.pyz` was copied without its `templates\` and `assets\` folders. Use the extracted release folder; the assessment itself is unaffected. |
