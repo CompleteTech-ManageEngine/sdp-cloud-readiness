@@ -63,7 +63,7 @@ Open `<Client>-Effort-Estimate.xlsx` from `branded/<Brand>/`:
 
 Every other figure is a formula. Excel recalculates on opening.
 
-To keep the documents (HTML, PDF, Word, Markdown) in step with your changes, carry the final hours back into `effort-estimate.json` and re-run:
+Your edited workbook is safe: re-running writes a fresh workbook beside it as `<Client>-Effort-Estimate.regenerated.xlsx` instead of overwriting your changes. To keep the documents (HTML, PDF, Word, Markdown) in step with your changes, carry the final hours back into `effort-estimate.json` and re-run:
 
 ```powershell
 python .\sdp_cloud_readiness.py --prepared-for "Client Name" --brand-assessment .\sdp-assessments\assessment-YYYYMMDD-HHMMSS-xxxxxx

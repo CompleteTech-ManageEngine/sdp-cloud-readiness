@@ -87,6 +87,15 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _previous_outputs(output: Path) -> dict[str, str]:
+    """Output hashes recorded by the previous run in this brand folder, to recognise edited deliverables."""
+    try:
+        manifest = json.loads((output / "branded-manifest.json").read_text(encoding="utf-8"))
+        return {item["name"]: item["sha256"] for item in manifest.get("outputs", [])}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return {}
+
+
 def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = True,
                        log: Callable[[str], None] = print) -> dict[str, Path]:
     """Render branded copies of an assessment folder; return the files written."""
@@ -130,27 +139,54 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
             parse(estimate_text), brand, "Effort Estimate",
             "PERT effort estimate derived from the assessment evidence; the companion workbook recalculates every figure.")
         documents.append((f"{stem}-Effort-Estimate", "Effort Estimate", estimate_text))
-    for name, text in pages.items():
-        atomic_write_bytes(output / name, text.encode("utf-8"))
-        written[name] = output / name
+    previous = _previous_outputs(output)
+    preserved: list[str] = []
+
+    def place(name: str) -> Path:
+        """Where to write an output. A deliverable changed since the last run (for example edited in Word or
+        Excel) is kept, and the new version is written beside it instead of over it."""
+        target = output / name
+        try:
+            edited = target.is_file() and name in previous and _sha256(target) != previous[name]
+        except OSError:
+            edited = False  # unreadable now; the write below reports it
+        if edited:
+            base, _, extension = name.rpartition(".")
+            preserved.append(name)
+            return output / f"{base}.regenerated.{extension}"
+        return target
+
+    def attempt(name: str, write: Callable[[Path], object]) -> Path | None:
+        """Write one output; a file that is open or read-only is skipped with a note, not fatal to the pack."""
+        target = place(name)
+        try:
+            write(target)
+        except OSError:
+            for leftover in output.glob(target.name + ".partial*"):
+                leftover.unlink(missing_ok=True)
+            skipped.append(f"{target.name}: could not be replaced (is it open in another program?); close it and run again")
+            return None
+        written[target.name] = target
+        return target
+
+    html_paths = {name: attempt(name, lambda t, text=text: atomic_write_bytes(t, text.encode("utf-8")))
+                  for name, text in pages.items()}
 
     if pdf:
         browser = find_browser()
         if browser is None:
             skipped.append("PDF: no Edge or Chrome found (set SDP_PDF_BROWSER to a Chromium browser path)")
         else:
-            for name in pages:
-                target = output / name.replace(".html", ".pdf")
+            for name, html_path in html_paths.items():
+                if html_path is None:
+                    continue
                 try:
-                    print_pdf(output / name, target, browser)
-                    written[target.name] = target
-                except (OSError, subprocess.SubprocessError):
-                    skipped.append("PDF: " + target.name + " could not be printed by the local browser")
+                    attempt(name.replace(".html", ".pdf"), lambda t, h=html_path: print_pdf(h, t, browser))
+                except subprocess.SubprocessError:
+                    skipped.append("PDF: " + name.replace(".html", ".pdf") + " could not be printed by the local browser")
 
     for file_stem, doc_type, text in documents:
-        target = output / f"{file_stem}.md"
-        atomic_write_bytes(target, (markdown_header(brand, doc_type) + text).encode("utf-8"))
-        written[target.name] = target
+        attempt(f"{file_stem}.md", lambda t, d=doc_type, x=text: atomic_write_bytes(t, (markdown_header(brand, d) + x).encode("utf-8")))
     try:
         from .branded_docx import write_docx
     except ImportError:
@@ -158,9 +194,7 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
     else:
         for file_stem, doc_type, text in documents:
             blocks = parse(text)
-            target = output / f"{file_stem}.docx"
-            write_docx(blocks, brand, document_title(blocks, doc_type), doc_type, target)
-            written[target.name] = target
+            attempt(f"{file_stem}.docx", lambda t, b=blocks, d=doc_type: write_docx(b, brand, document_title(b, d), d, t))
 
     if estimate is not None:
         try:
@@ -168,10 +202,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         except ImportError:
             skipped.append("Effort estimate workbook: install openpyxl to add the editable PERT workbook")
         else:
-            target = output / f"{stem}-Effort-Estimate.xlsx"
             baseline = f"PERT effort estimate · assessment of {data.get('generated_at', '')[:10]}"
-            write_estimate_workbook(estimate, brand, target, baseline)
-            written[target.name] = target
+            attempt(f"{stem}-Effort-Estimate.xlsx", lambda t: write_estimate_workbook(estimate, brand, t, baseline))
 
     findings, coverage = folder / "findings.csv", folder / "coverage.csv"
     if findings.is_file() and coverage.is_file():
@@ -180,9 +212,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         except ImportError:
             skipped.append("Workbook: install openpyxl to add the branded findings and coverage workbook")
         else:
-            target = output / f"{stem}-Assessment-Findings-and-Coverage.xlsx"
-            write_evidence_workbook(findings, coverage, target, brand, folder.name)
-            written[target.name] = target
+            attempt(f"{stem}-Assessment-Findings-and-Coverage.xlsx",
+                    lambda t: write_evidence_workbook(findings, coverage, t, brand, folder.name))
     else:
         skipped.append("Workbook: findings.csv or coverage.csv is missing")
 
@@ -198,6 +229,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
         "outputs": [{"name": name, "sha256": _sha256(path)} for name, path in sorted(written.items())],
         "skipped": skipped,
     }
+    if preserved:
+        manifest["preserved_edits"] = preserved
     if scope_figures:
         manifest["scope_of_work_figures"] = scope_figures
     if estimate is not None:
@@ -207,6 +240,8 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
     log("Branded copies (" + brand.name + (", prepared for " + brand.prepared_for if brand.prepared_for else "") + "):")
     for name in sorted(written):
         log("  " + str(written[name]))
+    for name in preserved:
+        log("  Kept your edited " + name + "; the new version is beside it as .regenerated")
     for note in skipped:
         log("  Skipped " + note)
     return written
