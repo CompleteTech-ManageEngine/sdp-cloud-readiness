@@ -227,3 +227,23 @@ class RerunSafetyTests(unittest.TestCase):
         manifest = json.loads((self.out / "branded-manifest.json").read_text(encoding="utf-8"))
         self.assertNotIn("preserved_edits", manifest)
         self.assertFalse(list(self.out.glob("*.regenerated.*")))
+
+
+class PdfPathTests(unittest.TestCase):
+    @unittest.skipUnless(__import__("sdp_audit.branded", fromlist=["find_browser"]).find_browser(), "no Chromium browser")
+    def test_prints_from_deep_folders(self):
+        """A 265-character path (Windows long paths enabled) that Chromium could not open: the failure seen in use."""
+        from sdp_audit.branded import find_browser, print_pdf
+        with tempfile.TemporaryDirectory() as directory:
+            deep = Path(directory)
+            while len(str(deep)) < 240:
+                deep = deep / "long-folder-name"
+            source = deep / ("p" * max(1, 260 - len(str(deep))) + ".html")
+            try:
+                deep.mkdir(parents=True)
+                source.write_text("<!doctype html><html><body><p>Deep folder</p></body></html>", encoding="utf-8")
+            except OSError:
+                self.skipTest("Windows long paths are not enabled on this machine")
+            target = source.with_suffix(".pdf")
+            print_pdf(source, target, find_browser())
+            self.assertEqual(target.read_bytes()[:5], b"%PDF-")
