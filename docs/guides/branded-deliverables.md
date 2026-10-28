@@ -12,7 +12,8 @@ Identity rules, the CompleteTech palette and the brand file format are in [BRAND
 | `<Client>-Vendor-Questions.html` / `.pdf` / `.docx` / `.md` | Answers and open questions, one question per printed page | PDF: Edge or Chrome; Word: `python-docx` |
 | `<Client>-Assessment-Findings-and-Coverage.xlsx` | Cover sheet with counts, then every row of `findings.csv` and `coverage.csv`, filterable | `openpyxl` |
 | `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html` / `.pdf` / `.docx` / `.md` | The engagement Scope of Work, when `scope-of-work.md` is present (see [Scope of Work](scope-of-work.md)) | PDF: Edge or Chrome; Word: `python-docx` |
-| `<Client>-Effort-Estimate.xlsx` and `.html` / `.pdf` / `.docx` / `.md` | PERT effort estimate, when `effort-estimate.json` is present: an editable workbook with live formulas plus the estimate document (see [Effort estimate](effort-estimate.md)) | Workbook: `openpyxl` |
+| `<Client>-Effort-Estimate.xlsx` and `.html` / `.pdf` / `.docx` / `.md` | PERT effort estimate, when `effort-estimate.json` is present: an editable workbook with live formulas plus the client-ready document (see [Effort estimate](effort-estimate.md)) | Workbook: `openpyxl` |
+| `<Client>-Effort-Estimate-Detailed.html` / `.pdf` / `.docx` / `.md` | The full PERT working table for internal review | — |
 | `branded-manifest.json` | SHA-256 of every source and output, Scope of Work figures and estimate totals used, anything skipped | — |
 
 `<Client>` is the `--prepared-for` name with spaces replaced by hyphens. `<Brand>` is the brand's company name, for example `CompleteTech-LLC`.

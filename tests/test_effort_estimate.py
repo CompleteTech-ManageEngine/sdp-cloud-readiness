@@ -129,3 +129,26 @@ class EffortEstimateTests(unittest.TestCase):
             rows = re.findall(r"^\| (?!Task |---|\*\*Subtotal)[^|]+\|[^|]+\| ([\d,]+) \|", section, re.M)
             subtotal = number(re.search(r"\*\*Subtotal\*\* \| \| \*\*([\d,]+)\*\*", section).group(1))
             self.assertEqual(sum(number(r) for r in rows), subtotal)
+
+    def test_detailed_document_keeps_full_working_table(self):
+        from sdp_audit.effort_estimate import detailed_markdown
+        estimate = self.load(ESTIMATE)
+        detailed = detailed_markdown(estimate, self.brand, self.data)
+        client = markdown(estimate, self.brand, self.data)
+        for column in ("O h/unit", "M h/unit", "P h/unit", "Std. dev. h", "Quantity basis", "Std. deviation"):
+            self.assertIn(column, detailed)
+            self.assertNotIn(column, client)
+        self.assertIn("| Reports | Query reports |", detailed)
+        self.assertIn(f"**{estimate.totals()['expected']:,.1f} hours** (PERT)", detailed)
+        self.assertIn("detailed working estimate", detailed)
+
+    def test_pack_writes_client_and_detailed_estimates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            for name, text in self.documents.items():
+                (folder / name).write_text(text, encoding="utf-8")
+            (folder / "effort-estimate.json").write_text(json.dumps(ESTIMATE), encoding="utf-8")
+            written = write_branded_pack(folder, self.brand, pdf=False, log=lambda _: None)
+            for stem in ("Client-Effort-Estimate", "Client-Effort-Estimate-Detailed"):
+                self.assertIn(f"{stem}.html", written)
+                self.assertIn(f"{stem}.md", written)

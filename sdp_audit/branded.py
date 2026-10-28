@@ -12,8 +12,9 @@ identities can coexist) from the assessment's own ``assessment.json``,
   questions and the Scope of Work, with the brand in the header and footer
 * ``<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html``, ``.pdf``, ``.docx`` and ``.md``
   when the assessment folder holds an engagement ``scope-of-work.md``
-* ``<Client>-Effort-Estimate.xlsx`` (editable PERT workbook) and ``.html``,
-  ``.pdf``, ``.docx``, ``.md`` when it holds an ``effort-estimate.json``
+* ``<Client>-Effort-Estimate.xlsx`` (editable PERT workbook), the client-ready
+  ``<Client>-Effort-Estimate`` and the full-table ``<Client>-Effort-Estimate-Detailed``
+  as ``.html``, ``.pdf``, ``.docx``, ``.md`` when it holds an ``effort-estimate.json``
 * ``branded-manifest.json`` with SHA-256 hashes of sources and outputs
 
 HTML needs only the standard library. PDFs are printed from the branded HTML by
@@ -39,7 +40,7 @@ from . import __version__
 from .artifacts import atomic_write_bytes
 from .branding import Brand, markdown_header, slug
 from .report import render_branded_questions_html, render_branded_report_html
-from .effort_estimate import ESTIMATE, load_estimate, markdown as estimate_markdown
+from .effort_estimate import ESTIMATE, detailed_markdown as estimate_detailed, load_estimate, markdown as estimate_markdown
 from .scope_of_work import Figures, document_title, parse, render_document_html, render_html as render_scope_html
 
 SCOPE_OF_WORK = "scope-of-work.md"
@@ -159,6 +160,11 @@ def write_branded_pack(assessment_dir: Path | str, brand: Brand, *, pdf: bool = 
             parse(estimate_text), brand, "Effort Estimate",
             "PERT effort estimate derived from the assessment evidence; the companion workbook recalculates every figure.")
         documents.append((f"{stem}-Effort-Estimate", "Effort Estimate", estimate_text))
+        detailed_text = estimate_detailed(estimate, brand, data)
+        pages[f"{stem}-Effort-Estimate-Detailed.html"] = render_document_html(
+            parse(detailed_text), brand, "Effort Estimate (Detailed)",
+            "Detailed PERT working estimate; the companion workbook recalculates every figure.")
+        documents.append((f"{stem}-Effort-Estimate-Detailed", "Effort Estimate (Detailed)", detailed_text))
     previous = _previous_outputs(output)
     preserved: list[str] = []
 
