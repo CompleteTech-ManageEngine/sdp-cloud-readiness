@@ -110,7 +110,7 @@ For repeated runs, fill the local `.env` beside the entry point. A first normal 
 | `vendor-questions.md` | Answers and open questions for ManageEngine, owners and the project |
 | `diagnostics.json` | Sanitized discovery and request diagnostics |
 | `report-manifest.json` and the folder ZIP | SHA-256 manifest and a read-back-verified archive |
-| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment` and `<Client>-Vendor-Questions` as `.html/.pdf/.docx/.md`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx/.md` (with `scope-of-work.md`), `<Client>-Effort-Estimate.xlsx/.html/.pdf/.docx/.md` (with `effort-estimate.json`), `branded-manifest.json` |
+| `branded/<Brand>/` | Branded copies, one folder per brand (`CompleteTech-LLC/` by default; none with `--brand none`): `<Client>-Cloud-Readiness-Assessment` and `<Client>-Vendor-Questions` as `.html/.pdf/.docx/.md`, `<Client>-Assessment-Findings-and-Coverage.xlsx`, `<Client>-ServiceDesk-Plus-Cloud-Scope-of-Work.html/.pdf/.docx/.md` (with `scope-of-work.md`), `<Client>-Effort-Estimate.xlsx/.html/.pdf/.docx/.md` and `<Client>-Effort-Estimate-Detailed.html/.pdf/.docx/.md` (with `effort-estimate.json`), `branded-manifest.json` |
 
 Exit code `0` means the reports were written and verified, not that migration is safe; `2` means the assessment is incomplete or was stopped; `1` is a startup or local output error.
 

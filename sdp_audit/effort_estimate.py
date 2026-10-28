@@ -246,3 +246,73 @@ def markdown(estimate: Estimate, brand: Brand, data: Mapping[str, Any]) -> str:
               "design (D02) fixes the retained reports, interfaces and historical records, and updated if the confirmed scope "
               "differs. Fees and payment terms are set out in the commercial proposal."]
     return "\n".join(lines) + "\n"
+
+
+def _h(value: float) -> str:
+    return f"{value:,.1f}"
+
+
+def _unit(value: float) -> str:
+    return f"{value:g}"
+
+
+def detailed_markdown(estimate: Estimate, brand: Brand, data: Mapping[str, Any]) -> str:
+    """Detailed working estimate: the full PERT table with per-unit hours, drivers and standard deviations."""
+    totals = estimate.totals()
+    figures = Figures(data, brand)
+    client = brand.prepared_for or "the client"
+    lines = [f"# {estimate.title}: detailed working estimate", "",
+             f"**Prepared for {client}**  ", f"**Prepared by {brand.name}**  ",
+             f"**Status:** {estimate.status}  ",
+             f"**Evidence baseline:** Cloud Readiness Assessment dated {figures.value('assessment_date', None)}, "
+             f"{figures.value('portal_count', None)} portals", "",
+             "## Summary", "",
+             f"The expected effort is **{_h(totals['expected'])} hours** (PERT). With {estimate.contingency_percent:g}% contingency "
+             f"the planning figure is **{_h(totals['with_contingency'])} hours**. There is an estimated 80% likelihood that "
+             f"delivery completes within {_h(totals['p80'])} hours and 90% within {_h(totals['p90'])} hours.", "",
+             "| Deliverable | Optimistic | Most likely | Pessimistic | Expected (PERT) | Std. deviation |",
+             "| --- | --- | --- | --- | --- | --- |"]
+    for code, name in estimate.deliverables.items():
+        group = estimate.group(code)
+        if not group:
+            continue
+        lines.append(f"| {code} {name} | {_h(sum(t.quantity * t.optimistic for t in group))} | "
+                     f"{_h(sum(t.quantity * t.most_likely for t in group))} | {_h(sum(t.quantity * t.pessimistic for t in group))} | "
+                     f"{_h(sum(t.expected for t in group))} | {_h(math.sqrt(sum(t.deviation ** 2 for t in group)))} |")
+    lines += [f"| **Total** | **{_h(totals['optimistic'])}** | **{_h(totals['most_likely'])}** | **{_h(totals['pessimistic'])}** | "
+              f"**{_h(totals['expected'])}** | **{_h(totals['deviation'])}** |", "",
+              "| Planning figure | Hours |", "| --- | --- |",
+              f"| Expected (PERT) | {_h(totals['expected'])} |",
+              f"| Contingency ({estimate.contingency_percent:g}%) | {_h(totals['with_contingency'] - totals['expected'])} |",
+              f"| **Expected with contingency** | **{_h(totals['with_contingency'])}** |",
+              f"| 80% confidence (P80) | {_h(totals['p80'])} |", f"| 90% confidence (P90) | {_h(totals['p90'])} |"]
+    if estimate.hourly_rate is not None:
+        lines.append(f"| Indicative cost at {estimate.currency} {estimate.hourly_rate:,.2f}/hour (with contingency) | "
+                     f"{estimate.currency} {totals['with_contingency'] * estimate.hourly_rate:,.2f} |")
+    lines += ["", "## Method", "",
+              "Each task has a quantity taken from the assessment evidence (or a fixed allowance) and three-point hours per unit: "
+              "optimistic (O), most likely (M) and pessimistic (P). PERT gives each task an expected effort of quantity \u00d7 (O + 4M + P) / 6 "
+              "and a standard deviation of quantity \u00d7 (P \u2212 O) / 6. The project standard deviation is the square root of the summed "
+              "task variances, treating tasks as independent; the confidence figures add 0.84\u03c3 (P80) and 1.28\u03c3 (P90) to the "
+              "expected total. The companion workbook recalculates every figure when a quantity or task time is changed.", "",
+              "<!-- pagebreak -->", "", "## Task estimates", ""]
+    for code, name in estimate.deliverables.items():
+        group = estimate.group(code)
+        if not group:
+            continue
+        lines += [f"### {code} {name}", "",
+                  "| Task | Quantity basis | Qty | O h/unit | M h/unit | P h/unit | Expected h | Std. dev. h | Basis |",
+                  "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+        lines += [f"| {t.task} | {driver_label(t.driver)} | {t.quantity:,.0f} | {_unit(t.optimistic)} | {_unit(t.most_likely)} | "
+                  f"{_unit(t.pessimistic)} | {_h(t.expected)} | {_h(t.deviation)} | {t.basis} |" for t in group]
+        lines += [f"| **Subtotal** | | | | | | **{_h(sum(t.expected for t in group))}** | "
+                  f"**{_h(math.sqrt(sum(t.deviation ** 2 for t in group)))}** | |", ""]
+    if estimate.assumptions:
+        lines += ["## Assumptions", ""] + [f"- {a}" for a in estimate.assumptions] + [""]
+    if estimate.exclusions:
+        lines += ["## Not included", ""] + [f"- {a}" for a in estimate.exclusions] + [""]
+    lines += ["## Use of this estimate", "",
+              "Detailed working estimate for review and adjustment. Hours are planning estimates derived from the assessment "
+              "evidence and the stated assumptions, not a quotation. The client-ready estimate presents the same figures without "
+              "the per-unit working detail."]
+    return "\n".join(lines) + "\n"

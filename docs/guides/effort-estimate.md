@@ -51,9 +51,19 @@ Inventory drivers require complete list collection, as for the Scope of Work; in
 
 For each task: expected = quantity × (O + 4M + P) / 6 and standard deviation = quantity × (P − O) / 6, where O, M and P are optimistic, most likely and pessimistic hours per unit. Deliverable and project standard deviations are the square root of the summed variances, treating tasks as independent. The confidence figures add 0.84σ (P80) and 1.28σ (P90) to the expected total. Contingency is applied to the expected total.
 
-## Client document and working workbook
+## Client-ready and detailed documents
 
-The estimate document (HTML, PDF, Word, Markdown) is written for the client: plain scope ("417 templates", "12 portals"), whole hours with a range per task, deliverable subtotals that add up to the totals, the confidence levels and a short explanation of the method. Per-unit hours, drivers and standard deviations stay in the workbook, which is the working tool for adjusting the estimate. Write `task` names and `basis` notes in client language, because they appear in the document as written.
+Each run produces the estimate twice, from the same `effort-estimate.json`, so the figures always agree:
+
+| Document | For | Content |
+| --- | --- | --- |
+| `<Client>-Effort-Estimate` | The client | Plain scope, whole hours with ranges, subtotals, confidence levels, assumptions and exclusions |
+| `<Client>-Effort-Estimate-Detailed` | Internal review | The full PERT table: quantity driver and quantity, optimistic / most likely / pessimistic hours per unit, expected hours and standard deviation per task and deliverable, the formulas |
+| `<Client>-Effort-Estimate.xlsx` | Adjusting the estimate | The same table with live formulas and input cells |
+
+Both documents come as HTML, PDF, Word and Markdown. Send the client-ready one; keep the detailed one for review and approval.
+
+The client-ready document is written for the client: plain scope ("417 templates", "12 portals"), whole hours with a range per task, deliverable subtotals that add up to the totals, the confidence levels and a short explanation of the method. Per-unit hours, drivers and standard deviations stay in the workbook, which is the working tool for adjusting the estimate. Write `task` names and `basis` notes in client language, because they appear in the document as written.
 
 ## Adjust in the workbook
 

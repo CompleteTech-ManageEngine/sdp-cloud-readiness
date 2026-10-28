@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Produce the effort estimate as two documents from one source: the client-ready `<Client>-Effort-Estimate` and the full PERT working table `<Client>-Effort-Estimate-Detailed` (per-unit hours, drivers, standard deviations), both as HTML, PDF, Word and Markdown.
+
 - Make the effort estimate document client-facing: plain scope, whole hours with ranges, subtotals that add up to the totals, the total placed against the confidence levels, and a plain-language method; working detail (per-unit hours, drivers, deviations) stays in the workbook.
 
 - Re-running branded copies keeps deliverables edited since they were generated (the new version is written beside them as `.regenerated`, listed in `preserved_edits`) and skips files that are open in another program instead of stopping the whole pack.
