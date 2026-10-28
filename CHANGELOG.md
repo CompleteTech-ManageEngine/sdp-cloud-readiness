@@ -11,6 +11,8 @@
 
 ## Unreleased
 
+- Print branded PDFs from a short temporary folder so pages in deep folders (paths beyond the Windows limit) no longer fail.
+
 - Remove the range column from the client-ready effort estimate; ranges remain in the detailed working estimate and the workbook.
 
 - Produce the effort estimate as two documents from one source: the client-ready `<Client>-Effort-Estimate` and the full PERT working table `<Client>-Effort-Estimate-Detailed` (per-unit hours, drivers, standard deviations), both as HTML, PDF, Word and Markdown.

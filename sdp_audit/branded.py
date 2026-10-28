@@ -68,20 +68,27 @@ def find_browser() -> str | None:
 
 
 def print_pdf(source: Path, target: Path, browser: str) -> None:
-    """Print a local, self-contained HTML file to PDF with a headless browser."""
-    with tempfile.TemporaryDirectory(prefix="sdp-pdf-") as profile:
+    """Print a local, self-contained HTML file to PDF with a headless browser.
+
+    The page is printed from a short temporary folder and the PDF moved into place afterwards: Chromium cannot open
+    or write file paths beyond the Windows path limit, which deep assessment folders easily exceed.
+    """
+    with tempfile.TemporaryDirectory(prefix="sdp-pdf-") as work:
+        page, printed = Path(work) / "page.html", Path(work) / "page.pdf"
+        shutil.copyfile(source, page)
         command = [
             browser, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
             "--disable-extensions", "--disable-sync", "--disable-background-networking",
             "--proxy-server=127.0.0.1:9", "--proxy-bypass-list=<-loopback>",
-            "--user-data-dir=" + profile, "--no-pdf-header-footer", "--print-to-pdf-no-header",
-            "--print-to-pdf=" + str(target), source.resolve().as_uri(),
+            "--user-data-dir=" + str(Path(work) / "profile"), "--no-pdf-header-footer", "--print-to-pdf-no-header",
+            "--print-to-pdf=" + str(printed), page.as_uri(),
         ]
-        target.unlink(missing_ok=True)
         subprocess.run(command, check=True, timeout=PDF_TIMEOUT_SECONDS,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if not target.is_file() or target.read_bytes()[:5] != b"%PDF-":
-        raise OSError("The browser did not produce a PDF.")
+        if not printed.is_file() or printed.read_bytes()[:5] != b"%PDF-":
+            raise OSError("The browser did not produce a PDF.")
+        target.unlink(missing_ok=True)
+        shutil.move(str(printed), str(target))
 
 
 def _sha256(path: Path) -> str:
