@@ -63,9 +63,18 @@ class EffortEstimateTests(unittest.TestCase):
         self.assertAlmostEqual(totals["p80"], expected + Z80 * deviation)
         self.assertAlmostEqual(totals["with_contingency"], expected * 1.1)
         text = markdown(estimate, self.brand, self.data)
-        self.assertIn(f"**{totals['expected']:,.1f} hours**", text)
+        self.assertIn(f"**{totals['with_contingency']:,.0f} hours**", text)
+        self.assertIn(f"| **Total estimate** | **{totals['with_contingency']:,.0f}** |", text)
         self.assertIn("Indicative cost", text)
-        self.assertIn("| Manual | Manual quantity | 4 |", text)
+        self.assertIn(f"| Per portal | {portals} portals |", text)
+        self.assertIn("| Manual | 4 (allowance) | 4 | 4–4 | Not in evidence |", text)
+
+    def test_client_document_hides_working_detail(self):
+        text = markdown(self.load(ESTIMATE), self.brand, self.data)
+        for internal in ("h/unit", "Std. deviation", "σ", "PERT)", "driver", "inventory_total", "Draft", "variance"):
+            self.assertNotIn(internal, text)
+        self.assertIn("PERT (three-point) method", text)
+        self.assertIn("## Estimate by deliverable", text)
 
     def test_validation(self):
         for change in ({"tasks": []}, {"deliverables": {"X1": "bad"}},
@@ -105,3 +114,18 @@ class EffortEstimateTests(unittest.TestCase):
                 self.assertTrue(any(f.startswith("=SUMIF(Tasks!$A$") for f in formulas))
                 self.assertTrue(any("0.8416" in f for f in formulas))
                 self.assertTrue(book.calculation.fullCalcOnLoad)
+
+    def test_displayed_hours_add_up(self):
+        import re
+        from sdp_audit.effort_estimate import rounded_parts
+        self.assertEqual(rounded_parts([141.6, 221.5, 110.4], 474), [142, 222, 110])
+        self.assertEqual(sum(rounded_parts([0.4, 0.4, 0.4, 0.4], 2)), 2)
+        text = markdown(self.load(ESTIMATE), self.brand, self.data)
+        number = lambda value: int(value.replace(",", ""))  # noqa: E731
+        parts = [number(h) for h in re.findall(r"^\| D\d\d [^|]+\| ([\d,]+) \|", text, re.M)]
+        total = number(re.search(r"^\| \*\*Total\*\* \| \*\*([\d,]+)\*\*", text, re.M).group(1))
+        self.assertEqual(sum(parts), total)
+        for section in re.split(r"^### ", text, flags=re.M)[1:]:
+            rows = re.findall(r"^\| (?!Task |---|\*\*Subtotal)[^|]+\|[^|]+\| ([\d,]+) \|", section, re.M)
+            subtotal = number(re.search(r"\*\*Subtotal\*\* \| \| \*\*([\d,]+)\*\*", section).group(1))
+            self.assertEqual(sum(number(r) for r in rows), subtotal)
